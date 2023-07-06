@@ -1,0 +1,3698 @@
+---
+title: "Public reactions to communication of uncertainty: How long-term benefits can outweigh short-term costs" 
+author: "Christine Stedtnitz^[London School of Economics], Paula Szewach^[University of Essex], Rob Johns^[University of Essex]"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  pdf_document: default
+  word_document: default
+  html_document:
+    df_print: paged
+    fig_caption: yes
+header-includes: \usepackage{setspace}\doublespacing
+bibliography: uncertainty.bib
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+
+```{r data management main study, include=FALSE} 
+
+# Data Management 
+
+rm(list = ls())
+
+# Load packages
+library(haven) 
+library(foreign) # for read.csv
+library(tidyverse) # for read_csv
+library(broom)
+library(dplyr)
+library(psych)
+library(ggplot2)
+library(ggthemes)
+library(knitr)
+library(modelsummary) # for msummary 
+library(kableExtra) # for msummary
+library(gt) # for msummary
+library(flextable) # to knit to word
+library(dotwhisker)
+library(gtsummary)
+library(likert)
+
+# set chunks defaults
+knitr::opts_chunk$set(
+  echo       = FALSE,
+  message    = FALSE,
+  warning    = FALSE
+)
+
+# # set flextable defaults
+# knitr::opts_chunk$set(echo = TRUE, 
+#                       fig.cap = TRUE)
+#   set_flextable_defaults(
+#   font.family = "Arial", font.size = 10, 
+#   theme_fun = "theme_vanilla",
+#   big.mark="", table.layout="autofit")
+  
+# Set working directory & load data
+
+raw <- read_csv("/Users/cstedtnitz/Dropbox/Uncertainty Project/Data/Raw/Uncertainty pilot_December 22, 2020_10.36.csv")
+
+setwd("/Users/cstedtnitz/Dropbox/1.PhD/1.Papers/Uncertainty/Data")
+
+# Dropping the first two lines
+df <- raw %>% slice(-c(1, 2)) 
+
+# Check that everyone has finished 
+# sum(df$Finished != "TRUE") 
+
+# Turn variables into factor / numeric as needed
+
+intoFactor <- c(
+  "threatBor_1",
+  "threatBor_2",
+  "threatBor_3",
+  "threatBor_4",
+  "threatBor_5",
+  "threatBor_6",
+  "threatBor_7",
+  "threatBor_8",
+  "gotTested",
+  "howSevere",
+  "hadCovid",
+  "highRisk",
+  "vaxCertainRound1",
+#  "vaxinformed",
+  "vaxApprove",
+  "gender",
+  "employment",
+  "work",
+  "ethnicity",
+  "education",
+  "vaxCertainRound2",
+  "manCheckEffec",
+  "manCheckSafety",
+  "brexit",
+  "Group"
+)
+
+intoNum <- c(
+  #"Duration..in.seconds.",
+  "LocationLatitude",
+  "LocationLongitude",
+  "vaxIntent1_1",
+  "trustMan_1",
+  "trustMan_4",
+  "trustMan_5",
+  "vaxIntentRound1_1",
+  "vaxIntentCtrl_1", 
+  "vaxEffecRound1_1",
+  "vaxSafeRound1_1",
+  "vaxHide_1",
+  "age",
+  "vaxIntentRound2_1",
+  "vaxEffecRound2_1",
+  "vaxSafeRound2_1",
+  "likes_1",
+  "likes_2",
+  "likes_4",
+  "likes_5",
+  "likes_6"
+)
+
+# Turn into numeric
+df[ , intoNum] <- lapply(df[ ,intoNum], as.numeric)
+
+# Turn into factor
+df[ , intoFactor] <- lapply(df[ ,intoFactor], as.factor)
+
+# Delete variables telling us in what order randomized answer categories were shown
+
+df$bb <- NULL
+df$EndDate <- NULL
+df$Status <- NULL
+df$IPAddress <- NULL
+df$Progress <- NULL
+df$Finished <- NULL
+df$RecipientLastName <- NULL
+df$RecipientFirstName <- NULL
+df$RecipientEmail <- NULL
+df$ExternalReference <- NULL
+df$DistributionChannel <- NULL
+df$UserLanguage <- NULL
+df$Consent <- NULL
+df$threatBor_DO <- NULL
+df$likes_DO <- NULL # not sure if we might need this 
+
+# Renaming variables
+
+df <- 
+df %>% 
+  dplyr::rename(
+    trust_Gov = trustMan_1,
+    trust_NHS = trustMan_4,
+    trust_Comp = trustMan_5,
+    threat_FinSit = threatBor_1, 
+    threat_Rights = threatBor_2,   
+    threat_Econ = threatBor_3, 
+    threat_Values = threatBor_4, 
+    threat_Democracy = threatBor_5, 
+    threat_MyHealth = threatBor_6, 
+    threat_BritHealth = threatBor_7, 
+    threat_ComLife = threatBor_8,
+    like_BorisJohnson = likes_1, 
+    like_ChrisWhitty = likes_2, 
+    like_NicolaSturgeon = likes_4,     
+    like_KeirStarmer = likes_5,     
+    like_NigelFarage = likes_6, 
+    generalVaxIntent = vaxIntent1_1, 
+    vaxIntentRound1 = vaxIntentRound1_1,
+    vaxIntentCtrl = vaxIntentCtrl_1,
+    vaxIntentRound2 = vaxIntentRound2_1,
+    vaxEffecRound1 = vaxEffecRound1_1,
+    vaxEffecRound2 = vaxEffecRound2_1,
+    vaxSafeRound1 = vaxSafeRound1_1,
+    vaxSafeRound2 = vaxSafeRound2_1,
+    vaxTransparent = vaxHide_1,
+    vaxInformed = vaxinformed
+  )
+
+df$threat_FinSit <- factor(df$threat_FinSit, 
+                       levels = c("Not at all", "Not very", "Fairly", "Extremely"))
+
+df$threat_Rights <- factor(df$threat_Rights, 
+                       levels = c("Not at all", "Not very", "Fairly", "Extremely"))
+
+df$threat_Econ <- factor(df$threat_Econ, 
+                       levels = c("Not at all", "Not very", "Fairly", "Extremely"))
+
+df$threat_Values <- factor(df$threat_Values, 
+                       levels = c("Not at all", "Not very", "Fairly", "Extremely"))
+
+df$threat_Democracy <- factor(df$threat_Democracy, 
+                       levels = c("Not at all", "Not very", "Fairly", "Extremely"))
+
+df$threat_MyHealth <- factor(df$threat_MyHealth, 
+                       levels = c("Not at all", "Not very", "Fairly", "Extremely"))
+
+df$threat_BritHealth <- factor(df$threat_BritHealth, 
+                       levels = c("Not at all", "Not very", "Fairly", "Extremely"))
+
+df$threat_ComLife <- factor(df$threat_ComLife, 
+                       levels = c("Not at all", "Not very", "Fairly", "Extremely"))
+
+
+df$threat_ComLife <- factor(df$threat_ComLife, 
+                       levels = c("Not at all", "Not very", "Fairly", "Extremely"))
+
+df$howSevere <- factor(df$threat_ComLife, 
+                       levels = c("No symptoms at all", "Mild symptoms", "Moderate symptoms", "Severe symptoms, no hospitalization", "Severe symptoms and hospitalization"))
+
+df$vaxCertainRound1 <- factor(df$vaxCertainRound1, 
+                       levels = c("Not at all confident", "Not very confident", "Fairly confident", "Very confident"))
+
+df$vaxCertainRound2 <- factor(df$vaxCertainRound2, 
+                       levels = c("Not at all confident", "Not very confident", "Fairly confident", "Very confident"))
+
+
+df$manCheckEffec <- factor(df$manCheckEffec, levels = c("A lot less effective", "A little less effective", "About as effective", "A little more effective", "A lot more effective"))
+
+df$manCheckSafety <- factor(df$manCheckSafety, levels = c("Much less less safe than expected", "A little less safe than expected", "About as safe as expected", "A little safer than expected", "Much safer than expected"))
+
+# Creating new variables
+
+# Which track respondents were assigned to (effectiveness / safety / no information)
+
+df$track <-  NA
+df$track[df$Group == "Effectiveness / No Uncertainty"] <- "effectiveness"
+df$track[df$Group == "Effectiveness / Empty Uncertainty"] <- "effectiveness"
+df$track[df$Group == "Effectiveness / Informed Uncertainty"] <- "effectiveness"
+df$track[df$Group == "Safety / No Uncertainty"] <- "safety"
+df$track[df$Group == "Safety / Empty Uncertainty"] <- "safety"
+df$track[df$Group == "Safety / Informed Uncertainty"] <- "safety"
+df$track[df$Group == "Control"] <- "no information"
+
+df$track <- factor(df$track, 
+                       levels = c("effectiveness", "safety", "no information"))
+
+# Shorter 
+
+df$track2 <- NULL
+df$track2[df$track == "effectiveness"] <- "effective"
+df$track2[df$track == "safety"] <- "safe"
+df$track2[df$track == "no information"] <- "no info"
+
+df$track2 <- factor(df$track2, 
+                       levels = c("effective", "safe", "no info"))
+
+
+# Creating a new group variable because we renamed the treatments 
+
+df$group <-  NA
+df$group[df$Group == "Effectiveness / No Uncertainty"] <- "effectiveness | point estimate"
+df$group[df$Group == "Safety / No Uncertainty"] <- "safety | point estimate"
+
+df$group[df$Group == "Effectiveness / Empty Uncertainty"] <- "effectiveness | confidence interval"
+df$group[df$Group == "Safety / Empty Uncertainty"] <- "safety | confidence interval"
+
+df$group[df$Group == "Effectiveness / Informed Uncertainty"] <- "effectiveness | ci and explanation"
+df$group[df$Group == "Safety / Informed Uncertainty"] <- "safety | ci and explanation"
+
+df$group[df$Group == "Control"] <- "no information at all"
+
+df$group <- factor(df$group, 
+                       levels = c("no information at all",
+                                  "effectiveness | point estimate",
+                                  "effectiveness | confidence interval",
+                                  "effectiveness | ci and explanation",
+                                  "safety | point estimate",
+                                  "safety | confidence interval",
+                                  "safety | ci and explanation"
+                                  ))
+# New categories 
+
+df$ci <-  NA
+df$ci[df$Group == "Effectiveness / No Uncertainty"] <- "point estimate"
+df$ci[df$Group == "Safety / No Uncertainty"] <- "point estimate"
+
+df$ci[df$Group == "Effectiveness / Empty Uncertainty"] <- "confidence interval"
+df$ci[df$Group == "Safety / Empty Uncertainty"] <- "confidence interval"
+
+df$ci[df$Group == "Effectiveness / Informed Uncertainty"] <- "ci and explanation"
+df$ci[df$Group == "Safety / Informed Uncertainty"] <- "ci and explanation"
+
+df$ci[df$Group == "Control"] <- "no information"
+
+df$ci <- factor(df$ci, 
+                       levels = c("no information", "point estimate", "confidence interval", "ci and explanation"))
+
+
+df$ci2 <-  NA
+df$ci2[df$ci == "point estimate"] <- "point estimate"
+df$ci2[df$ci == "confidence interval"] <- "confidence interval"
+df$ci2[df$ci == "ci and explanation"] <- "ci and explanation"
+
+df$ci2 <- factor(df$ci2, 
+                 levels = c("point estimate", "confidence interval", "ci and explanation"))
+
+
+df$vaxCertainRound1_num <- NA
+df$vaxCertainRound1_num[df$vaxCertainRound1 == "Not at all confident"] <- 1
+df$vaxCertainRound1_num[df$vaxCertainRound1 == "Not very confident"] <- 2
+df$vaxCertainRound1_num[df$vaxCertainRound1 == "Fairly confident"] <- 3
+df$vaxCertainRound1_num[df$vaxCertainRound1 == "Very confident"] <- 4
+
+df$vaxCertainRound2_num <- NA
+df$vaxCertainRound2_num[df$vaxCertainRound2 == "Not at all confident"] <- 1
+df$vaxCertainRound2_num[df$vaxCertainRound2 == "Not very confident"] <- 2
+df$vaxCertainRound2_num[df$vaxCertainRound2 == "Fairly confident"] <- 3
+df$vaxCertainRound2_num[df$vaxCertainRound2 == "Very confident"] <- 4
+
+# Merge round 1 vaccination intentions 
+# (vaxIntentRound1_1 only includes treated respondents, so add those from the control)
+
+df$vaxIntentRound1 <- ifelse(complete.cases(df$vaxIntentRound1), 
+                       df$vaxIntentRound1,
+                       df$vaxIntentCtrl)
+
+# 2 respondents in the baseline group did not answer the vaccination intention questions 
+
+# sum(is.na(df$vaxIntentRound1))
+# x <- df[is.na(df$vaxIntentRound1),]
+# 
+# x$vaxIntentRound1
+# x$vaxIntentCtrl_1
+# x$group
+# 
+# table(df$group)
+
+# Remove those 2 from the sample
+
+df <- df[complete.cases(df$vaxIntentRound1), ]
+
+
+df$age <- 2022 - df$age
+
+df$male = ifelse(df$gender == "Male", 1, 0)
+
+
+# Generation
+
+df$generation[df$age < 23] <- "Gen Z (1997-2012)"
+df$generation[df$age >= 23] <- "Millenials (1981-96)"
+df$generation[df$age >= 39] <- "Gen X (1965-80)"
+df$generation[df$age >= 54] <- "Baby boomers (1946-64)"
+df$generation[df$age >= 74] <- "Silent generation (1928-45)"
+
+df$generation <- factor(df$generation, levels = c("Gen Z (1997-2012)", 
+                                                  "Millenials (1981-96)",
+                                                  "Gen X (1965-80)",
+                                                  "Baby boomers (1946-64)",
+                                                  "Silent generation (1928-45)"))
+
+# High risk
+df$risk = ifelse(df$highRisk == "No, none of my close family is high risk", 0, 1)
+
+df$highRisk2 <- "Not high risk"
+df$highRisk2[df$highRisk == "I'm high risk"] <- "I am high risk"
+df$highRisk2[df$highRisk == "I'm high risk and at least one more of my family members is also high-risk"] <- "High risk family member"
+df$highRisk2[df$highRisk == "I'm not but at least one of my family members is"] <- "High risk family member"
+df$highRisk2[df$highRisk == "Prefer not to say"] <- "Prefer not to say"
+
+df$highRisk2 <- factor(df$highRisk2, 
+                       levels = c("I am high risk", "High risk family member", "Not high risk", "Prefer not to say"))
+
+# work affected
+
+df$workAffected <- "Has affected my work"
+df$workAffected[df$work == "Yes - I am working (or have worked) reduced hours because of the pandemic"] <- "Has not affected my work"
+df$workAffected[df$work == "Yes - I have been furloughed"] <- "Has not affected my work"
+df$workAffected[df$work == "Yes - I have lost my job"] <- "Has not affected my work"
+df$workAffected[df$work == "Yes - In other ways"] <- "Has not affected my work"
+
+df$workAffected <- factor(df$workAffected, 
+                       levels = c("Has affected my work", 
+                                  "Has not affected my work"))
+
+# Had covid
+
+df$hadCovid <- factor(df$hadCovid, 
+                       levels = c("Certain that I've had it",
+                                  "Pretty sure I've had it",
+                                  "Think I've probably had it",
+                                  "Not at all sure",
+                                  "Think I probably haven't had it",
+                                  "Pretty sure I haven't had it",
+                                  "Certain that I haven't had it"))
+
+df$hadCovid3 <- "Think I have not had covid"
+df$hadCovid3[df$hadCovid == "Certain that I've had it"] <- "Think I had covid"
+df$hadCovid3[df$hadCovid == "Pretty sure I've had it"] <- "Think I had covid"
+df$hadCovid3[df$hadCovid == "Think I've probably had it"] <- "Think I had covid"
+df$hadCovid3[df$hadCovid == "Not at all sure"] <- "Not at all sure"
+
+df$hadCovid3 <- factor(df$hadCovid3, 
+                       levels = c("Think I had covid", 
+                                  "Think I have not had covid",
+                                  "Not at all sure"))
+
+# Ethnicity
+
+df$ethnicity_short[df$ethnicity == "White English/Welsh/Scottish/Northern Irish/British"] <- "White"
+df$ethnicity_short[df$ethnicity == "Other white background"] <- "White"
+df$ethnicity_short[df$ethnicity == "White Irish"] <- "White"
+df$ethnicity_short[df$ethnicity == "African"] <- "African/Arab/Caribbean"
+df$ethnicity_short[df$ethnicity == "Arab"] <- "African/Arab/Caribbean"
+df$ethnicity_short[df$ethnicity == "Caribbean"] <- "African/Arab/Caribbean"
+df$ethnicity_short[df$ethnicity == "Other Black/African/Caribbean background"] <- "African/Arab/Caribbean"
+
+df$ethnicity_short[df$ethnicity == "Pakistani"] <- "South Asian"
+df$ethnicity_short[df$ethnicity == "Bangladeshi"] <- "South Asian"
+df$ethnicity_short[df$ethnicity == "Indian"] <- "South Asian"
+
+df$ethnicity_short[df$ethnicity == "Chinese"] <- "Other Asian"
+df$ethnicity_short[df$ethnicity == "Other Asian background"] <- "Other Asian"
+
+df$ethnicity_short[df$ethnicity == "Mixed/Multiple ethnic groups - White and Asian"] <- "Mixed"
+df$ethnicity_short[df$ethnicity == "Mixed/Multiple ethnic groups - White and Black African"] <- "Mixed"
+df$ethnicity_short[df$ethnicity == "Mixed/Multiple ethnic groups - White and Black Caribbean"] <- "Mixed"
+
+df$ethnicity_short <- factor(df$ethnicity_short, 
+                       levels = c("White", 
+                                  "South Asian",
+                                  "Other Asian",
+                                  "African/Arab/Caribbean",
+                                  "Mixed"))
+
+# Employment
+
+df$employment_short[df$employment == "Employed full time"] <- "Employed (full time)"
+df$employment_short[df$employment == "Employed part time"] <- "Employed (part time)"
+df$employment_short[df$employment == "Self-employed"] <- "Self-employed"
+df$employment_short[df$employment == "Looking after the home/children"] <- "Full time parent/carer"
+df$employment_short[df$employment == "Unemployed looking for work"] <- "Not employed"
+df$employment_short[df$employment == "Unemployed not looking for work"] <- "Not employed"
+df$employment_short[df$employment == "Retired"] <- "Retired"
+df$employment_short[df$employment == "Student"] <- "Student"
+
+df$employment_short <- factor(df$employment_short, 
+                       levels = c("Employed (full time)", 
+                                  "Employed (part time)", 
+                                  "Self-employed",
+                                  "Full time parent/carer",
+                                  "Not employed",
+                                  "Retired",
+                                  "Student"))
+
+
+# The effect of the bad news (=Round 2) on vaccination intentions
+df$vaxDif <- df$vaxIntentRound2 - df$vaxIntentRound1 # (2-1 to get a positive mean)
+
+# The effect of the bad news (=Round 2) on certianty
+df$vaxCertainDif <- df$vaxCertainRound1_num - df$vaxCertainRound2_num
+
+# The effect of the bad news (=Round 2) on perceived safety
+df$safeDif <- df$vaxSafeRound2 - df$vaxSafeRound1 
+
+# The effect of the bad news (=Round 2) on perceived effectiveness
+df$effecDif = df$vaxEffecRound2 - df$vaxEffecRound1 
+
+# Enough information
+
+df$vaxInformed_num <- NA
+df$vaxInformed_num[df$vaxInformed == "Yes, I have all the information I need"] <- 4
+df$vaxInformed_num[df$vaxInformed == "No, I would need a bit more information"] <- 3
+df$vaxInformed_num[df$vaxInformed == "No, I would need quite a lot more information"] <- 2
+df$vaxInformed_num[df$vaxInformed == "No, I would need much more information"] <- 1
+
+df$vaxInformed_d <- NA
+df$vaxInformed_d[df$vaxInformed == "Yes, I have all the information I need"] <- 1
+df$vaxInformed_d[df$vaxInformed == "No, I would need a bit more information"] <- 0
+df$vaxInformed_d[df$vaxInformed == "No, I would need quite a lot more information"] <- 0
+df$vaxInformed_num[df$vaxInformed == "No, I would need much more information"] <- 0
+
+df$vaxInformed_3 <- NA
+df$vaxInformed_3[df$vaxInformed == "Yes, I have all the information I need"] <- 3
+df$vaxInformed_3[df$vaxInformed == "No, I would need a bit more information"] <- 2
+df$vaxInformed_3[df$vaxInformed == "No, I would need quite a lot more information"] <- 1
+df$vaxInformed_3[df$vaxInformed == "No, I would need much more information"] <- 1
+
+# Certain
+
+df$vaxCertainRound1_3 <- NA
+df$vaxCertainRound1_3[df$vaxCertainRound1 == "Not at all confident"] <- 1
+df$vaxCertainRound1_3[df$vaxCertainRound1 == "Not very confident"] <- 1
+df$vaxCertainRound1_3[df$vaxCertainRound1 == "Fairly confident"] <- 2
+df$vaxCertainRound1_3[df$vaxCertainRound1 == "Very confident"] <- 3
+
+# Manipulation Check
+
+df$manCheckSafety_num <- NA
+df$manCheckSafety_num[df$manCheckSafety == "Much less less safe than expected"] <- 5
+df$manCheckSafety_num[df$manCheckSafety == "A little less safe than expected"] <- 4
+df$manCheckSafety_num[df$manCheckSafety == "About as safe as expected"] <- 3
+df$manCheckSafety_num[df$manCheckSafety == "A little safer than expected"] <- 2
+df$manCheckSafety_num[df$manCheckSafety == "Much safer than expected"] <- 1
+
+df$manCheckEffec_num <- NA
+df$manCheckEffec_num[df$manCheckEffec == "A lot less effective"] <- 5
+df$manCheckEffec_num[df$manCheckEffec == "A little less effective"] <- 4
+df$manCheckEffec_num[df$manCheckEffec == "About as effective"] <- 3
+df$manCheckEffec_num[df$manCheckEffec == "A little more effective"] <- 2
+df$manCheckEffec_num[df$manCheckEffec == "A lot more effective"] <- 1
+
+df$manCheck_num <- ifelse(complete.cases(df$manCheckSafety_num), df$manCheckSafety_num,
+                      df$manCheckEffec_num)
+
+# Rename factor levels - manCheckSafety
+
+levels(df$manCheckSafety)[levels(df$manCheckSafety)=="Much less less safe than expected"] <- "Much less safe"
+levels(df$manCheckSafety)[levels(df$manCheckSafety)=="A little less safe than expected"] <- "A little less safe"
+levels(df$manCheckSafety)[levels(df$manCheckSafety)=="About as safe as expected"] <- "About as safe as expected"
+levels(df$manCheckSafety)[levels(df$manCheckSafety)=="A little safer than expected"] <- "A little safer"
+levels(df$manCheckSafety)[levels(df$manCheckSafety)=="Much safer than expected"] <- "Much safer"
+
+df$manCheckSafety <- factor(df$manCheckSafety, levels = c("Much less safe", "A little less safe", "About as safe as expected", "A little safer", "Much safer"))
+
+# Rename factor levels - manCheckEffec
+
+levels(df$manCheckEffec)[levels(df$manCheckEffec)=="A lot less effective"] <- "A lot less"
+levels(df$manCheckEffec)[levels(df$manCheckEffec)=="A little less effective"] <- "A little less"
+levels(df$manCheckEffec)[levels(df$manCheckEffec)=="About as effective"] <- "About as effective as expected"
+levels(df$manCheckEffec)[levels(df$manCheckEffec)=="A little more effective"] <- "A little more"
+levels(df$manCheckEffec)[levels(df$manCheckEffec)=="A lot more effective"] <- "A lot more"
+
+df$manCheckEffec <- factor(df$manCheckEffec, levels = c("A lot less", "A little less", "About as effective as expected", "A little more", "A lot more"))
+
+
+# Approval
+
+df$vaxApprove <- factor(df$vaxApprove, 
+                       levels = c("Strongly support", "Support", "Not sure", "Oppose", "Strongly oppose"))
+
+df$vaxApprove_num <- NA
+df$vaxApprove_num[df$vaxApprove == "Strongly support"] <- 5
+df$vaxApprove_num[df$vaxApprove == "Support"] <- 4
+df$vaxApprove_num[df$vaxApprove == "Not sure"] <- 3
+df$vaxApprove_num[df$vaxApprove == "Oppose"] <- 2
+df$vaxApprove_num[df$vaxApprove == "Strongly oppose"] <- 1
+
+df$vaxApprove_3 <- NA
+df$vaxApprove_3[df$vaxApprove == "Strongly support"] <- 3
+df$vaxApprove_3[df$vaxApprove == "Support"] <- 3
+df$vaxApprove_3[df$vaxApprove == "Not sure"] <- 2
+df$vaxApprove_3[df$vaxApprove == "Oppose"] <- 1
+df$vaxApprove_3[df$vaxApprove == "Strongly oppose"] <- 1
+
+df$threat_Rights_num <- NA
+df$threat_Rights_num[df$threat_Rights == "Not at all"] <- 1
+df$threat_Rights_num[df$threat_Rights == "Not very"] <- 2
+df$threat_Rights_num[df$threat_Rights == "Fairly"] <- 3
+df$threat_Rights_num[df$threat_Rights == "Extremely"] <- 4
+
+df$threat_Values_num <- NA
+df$threat_Values_num[df$threat_Values == "Not at all"] <- 1
+df$threat_Values_num[df$threat_Values == "Not very"] <- 2
+df$threat_Values_num[df$threat_Values == "Fairly"] <- 3
+df$threat_Values_num[df$threat_Values == "Extremely"] <- 4
+
+df$threat_MyHealth_num <- NA
+df$threat_MyHealth_num[df$threat_MyHealth == "Not at all"] <- 1
+df$threat_MyHealth_num[df$threat_MyHealth == "Not very"] <- 2
+df$threat_MyHealth_num[df$threat_MyHealth == "Fairly"] <- 3
+df$threat_MyHealth_num[df$threat_MyHealth == "Extremely"] <- 4
+
+df$threat_FinSit_num <- NA
+df$threat_FinSit_num[df$threat_FinSit == "Not at all"] <- 1
+df$threat_FinSit_num[df$threat_FinSit == "Not very"] <- 2
+df$threat_FinSit_num[df$threat_FinSit == "Fairly"] <- 3
+df$threat_FinSit_num[df$threat_FinSit == "Extremely"] <- 4
+
+df$threat_Econ_num <- NA
+df$threat_Econ_num[df$threat_Econ == "Not at all"] <- 1
+df$threat_Econ_num[df$threat_Econ == "Not very"] <- 2
+df$threat_Econ_num[df$threat_Econ == "Fairly"] <- 3
+df$threat_Econ_num[df$threat_Econ == "Extremely"] <- 4
+
+df$threat_BritHealth_num <- NA
+df$threat_BritHealth_num[df$threat_BritHealth == "Not at all"] <- 1
+df$threat_BritHealth_num[df$threat_BritHealth == "Not very"] <- 2
+df$threat_BritHealth_num[df$threat_BritHealth == "Fairly"] <- 3
+df$threat_BritHealth_num[df$threat_BritHealth == "Extremely"] <- 4
+
+df$threat_Democracy_num <- NA
+df$threat_Democracy_num[df$threat_Democracy == "Not at all"] <- 1
+df$threat_Democracy_num[df$threat_Democracy == "Not very"] <- 2
+df$threat_Democracy_num[df$threat_Democracy == "Fairly"] <- 3
+df$threat_Democracy_num[df$threat_Democracy == "Extremely"] <- 4
+
+df$threat_ComLife_num <- NA
+df$threat_ComLife_num[df$threat_ComLife == "Not at all"] <- 1
+df$threat_ComLife_num[df$threat_ComLife == "Not very"] <- 2
+df$threat_ComLife_num[df$threat_ComLife == "Fairly"] <- 3
+df$threat_ComLife_num[df$threat_ComLife == "Extremely"] <- 4
+
+df$hadCovid2 <- df$hadCovid 
+df$hadCovid2 <- factor(df$hadCovid2, 
+                       levels = c("Certain that I haven't had it", 
+                                  "Pretty sure I haven't had it", 
+                                  "Think I probably haven't had it", 
+                                  "Not at all sure", 
+                                  "Think I've probably had it",
+                                  "Pretty sure I've had it",
+                                  "Certain that I've had it"))
+
+df$hadCovid_num <- NA
+df$hadCovid_num[df$hadCovid == "Certain that I haven't had it"] <- 1
+df$hadCovid_num[df$hadCovid == "Pretty sure I haven't had it"] <- 2
+df$hadCovid_num[df$hadCovid == "Think I probably haven't had it"] <- 3
+df$hadCovid_num[df$hadCovid == "Not at all sure"] <- 4
+df$hadCovid_num[df$hadCovid == "Think I've probably had it"] <- 5
+df$hadCovid_num[df$hadCovid == "Pretty sure I've had it"] <- 6
+df$hadCovid_num[df$hadCovid == "Certain that I've had it"] <- 7
+
+
+df$trust_Comp <- as.numeric(as.character(df$trust_Comp))
+df$trust_Gov <- as.numeric(as.character(df$trust_Gov))
+df$trust_NHS <- as.numeric(as.character(df$trust_NHS))
+
+df$like_BorisJohnson <- as.numeric(as.character(df$like_BorisJohnson))
+df$like_ChrisWhitty <- as.numeric(as.character(df$like_ChrisWhitty))
+df$like_KeirStarmer <- as.numeric(as.character(df$like_KeirStarmer))
+df$like_NicolaSturgeon <- as.numeric(as.character(df$like_NicolaSturgeon))
+df$like_NigelFarage <- as.numeric(as.character(df$like_NigelFarage))
+
+
+
+
+
+df$vaxIntentRound1_ord <- ordered(as.factor(df$vaxIntentRound1))
+df$vaxCertainRound1_ord <- ordered(as.factor(df$vaxCertainRound1))
+df$vaxSafeRound1_ord <- ordered(as.factor(df$vaxSafeRound1))
+df$vaxEffecRound1_ord <- ordered(as.factor(df$vaxEffecRound1))
+
+df$vaxInformed_ord <- ordered(as.factor(df$vaxInformed))
+df$vaxTransparent_ord <- ordered(as.factor(df$vaxTransparent))
+df$vaxApprove_ord <- ordered(as.factor(df$vaxApprove))
+
+df$vaxIntentRound2_ord <- ordered(as.factor(df$vaxIntentRound2))
+df$vaxCertainRound2_ord <- ordered(as.factor(df$vaxCertainRound2))
+df$vaxSafeRound2_ord <- ordered(as.factor(df$vaxSafeRound2))
+df$vaxEffecRound2_ord <- ordered(as.factor(df$vaxEffecRound2))
+
+df$vaxDif_ord <- ordered(as.factor(df$vaxDif))
+df$vaxCertainDif_ord <- ordered(as.factor(df$vaxCertainDif))
+df$safeDif_ord <- ordered(as.factor(df$safeDif))
+df$effecDif_ord <- ordered(as.factor(df$effecDif))
+
+
+
+# Respondents who passed the manipulation check, i.e. who noticed that the vaccine was less safe/effective than expected
+df_passed_mc <- subset(df, 
+              manCheckSafety == "Much less less safe than expected" |
+              manCheckSafety == "A little less safe than expected" |
+              manCheckSafety == "About as safe as expected" |
+              manCheckEffec == "A lot less effective" |
+              manCheckEffec == "A little less effective" |
+              manCheckEffec == "About as effective" | 
+              group == "no information at all"
+              )
+
+# Respondents who did not fail the manipulation check
+df_failed_mc <- subset(df, 
+              manCheckSafety != "Much safer than expected" |
+              manCheckSafety != "A little safer than expected" |
+              manCheckEffec != "A little more effective" |
+              manCheckEffec != "A lot more effective" | 
+              group == "no information at all"
+              )
+
+treated <- subset(df, group != "no information at all")
+treated_effec <- subset(df, track == "effectiveness" & group != "no information at all")
+treated_safe <- subset(df, track == "safety" & group != "no information at all")
+
+df_effec <- subset(df, track == "effectiveness")
+df_safe <- subset(df, track == "safety")
+
+# Create threat scales
+
+# Measuring internal consistency
+
+df_realisticThreat <- df[, c("threat_MyHealth_num", "threat_BritHealth_num", "threat_FinSit_num", "threat_Econ_num", "threat_ComLife_num")]
+df_symbolicThreat <- df[, c("threat_Values_num", "threat_Democracy_num", "threat_Rights_num")]
+
+# Identifying missing values
+which(is.na(df_realisticThreat))
+which(is.na(df_symbolicThreat))
+
+# Excluding observations with missing values
+df_realisticThreat <- df_realisticThreat[complete.cases(df_realisticThreat), ]
+df_symbolicThreat <- df_symbolicThreat[complete.cases(df_symbolicThreat), ]
+
+# Cronbach's alpha -- this is NOT GREAT! 
+# install.packages("ltm")
+library(ltm)
+cronbach.alpha(df_realisticThreat) # 0.5
+cronbach.alpha(df_symbolicThreat) # 0.599
+
+# Creating scales 
+df$realisticThreat <- df$threat_MyHealth + df$threat_BritHealth + df$threat_FinSit + df$threat_Econ + df$threat_ComLife / 5
+df$symbolicThreat <- df$threat_Values + df$threat_Democracy + df$threat_Rights / 3
+
+# Drop variables that could idenfity respondents
+
+drop <- c("LocationLatitude", "LocationLongitude")
+df <- df[,!(names(df) %in% drop)]
+
+# Save dataset in R
+# save(df, file="/Users/christine/Dropbox/1.PhD/1.Papers/Uncertainty/Data/Working/workingData")
+save(df, file="/Users/cstedtnitz/Dropbox/1.PhD/1.Papers/Uncertainty/Data/Working/workingData")
+
+# Save dataset to SPSS/Stata
+
+# NB: Need to change this variable name in order to export to Stata/SPSS
+names(df)[names(df) == "Duration (in seconds)"] <- "duration"
+
+library(haven)
+
+# write_sav(df, "workingData.sav")	
+write_dta(df, "workingData.dta")
+
+# For regression plots
+
+cm_ci <- c("(Intercept)" = "(Intercept)",
+        "cipoint estimate" = "point estimate only",
+        "ciconfidence interval" = "point estimate plus \nconfidence interval", 
+        "cici and explanation" = "point estimate plus \nci and explanation")
+
+cm_ci_short <- c("(Intercept)" = "(Intercept)",
+        "cipoint estimate" = "point estimate",
+        "ciconfidence interval" = "confidence interval", 
+        "cici and explanation" = "ci and explanation")
+
+cm_ci_safe <- c("(Intercept)" = "(Intercept)",
+        "cipoint estimate" = "point estimate \n('2 in 10,000\nwill develop \nserious side \neffects.')",
+        "ciconfidence interval" = "confidence interval \n('To be more exact, \nwe estimate that \nbetween 1 and 6 in \n10,000 will develop \nserious side effects.')", 
+        "cici and explanation" = "confidence interval \nand explanation \n('We cannot be exact \nfor two reasons...')")
+
+cm_ci_effec <- c("(Intercept)" = "(Intercept)",
+        "cipoint estimate" = "point estimate \n('The vaccine is \n90% effective.')",
+        "ciconfidence interval" = "confidence interval \n('The true level of \neffectiveness is very \nlikely to fall between \n83% and 97%.')", 
+        "cici and explanation" = "confidence interval \nand explanation \n('We cannot be exact \nfor two reasons...')")
+
+
+# cm_ci_safe <- c("(Intercept)" = "(Intercept)",
+#         "cipoint estimate" = "Point Estimate \n('2 in 10,000 will develop \nserious side effects.')",
+#         "ciconfidence interval" = "Confidence Interval \n('To be more exact, \nwe estimate that \nbetween 1 and 6 in \n10,000 will develop \nserious side effects.')", 
+#         "cici and explanation" = "Confidence Interval \nand Explanation \n('We cannot be exact \nfor two reasons...')")
+# 
+# cm_ci_effec <- c("(Intercept)" = "(Intercept)",
+#         "cipoint estimate" = "Point Estimate \n('The vaccine is \n90% effective.')",
+#         "ciconfidence interval" = "Confidence Interval \n('The true level of \neffectiveness is very \nlikely to fall between \n83% and 97%.')", 
+#         "cici and explanation" = "Confidence Interval \nand Explanation \n('We cannot be exact \nfor two reasons...')")
+
+
+cm_ci2 <- c("(Intercept)" = "(Intercept)",
+        "ci2confidence interval" = "confidence interval", 
+        "ci2ci and explanation" = "ci and explanation")
+
+cm_group <- c("(Intercept)" = "(Intercept)",
+        "groupeffectiveness | point estimate" = "point estimate", # effectiveness | 
+        "groupeffectiveness | confidence interval" = "confidence interval", # effectiveness |
+        "groupeffectiveness | ci and explanation" = "ci and explanation",
+        "groupsafety | point estimate" = "point estimate",
+        "groupsafety | confidence interval" = "confidence interval",
+        "groupsafety | ci and explanation" = "ci and explanation"
+)
+
+cm_all <- c("(Intercept)" = "(Intercept)",
+        "ciconfidence interval"= "confidence interval",
+        "cici and explanation" = "ci & explanation",
+        "uncertainty2uncertainty" = "acknowledged uncertainty",
+        "male" = "male",
+        "age" = "age",
+        "risk" = "high risk",
+        "hadCovid_num" = "had covid",
+        "trust_Comp" = "trust in manufacturers",
+        "trust_NHS" = "trust in NHS",
+        "threat_MyHealth_num" = "threat personal health",
+        "threat_FinSit_num" = "threat financial situation",
+        "threat_Rights_num" = "threat rights and freedoms",
+        "threat_Values_num" = "threat values and traditions",
+        "threat_ComLife_num" = "threat community life",
+        "like_BorisJohnson" = "like Boris Johnson"
+)
+```
+
+
+
+```{r data management post-test pre-test, include=FALSE} 
+
+library(tidyverse) # for read_csv
+
+# Reading in data
+raw_df2 <- read_csv("/Users/cstedtnitz/Dropbox/1.PhD/1.Papers/Uncertainty/Data/postTestPreTest/Uncertainty post-test pre-test_March 2, 2023_06.55.csv")
+
+# Dropping the first two lines
+df2 <- raw_df2 %>% slice(-c(1, 2)) 
+
+# Data management pre-test
+
+df2 <- 
+df2 %>% 
+  dplyr::rename(
+    vaxIntentRound1 = vaxIntentRound1_1,
+    vaxIntentRound2 = vaxIntentRound2_10,
+    
+    vaxEffecRound1 = vaxEffecRound1_1,
+    vaxEffecRound2 = vaxEffecRound2_1,
+    
+    vaxSafeRound1 = vaxSafeRound1_1,
+    vaxSafeRound2 = vaxSafeRound2_1,
+    
+    selfunderstand_effec = selfunderstand_effec_1, 
+    selfunderstand_safe = selfunderstand_safe_1,
+    
+    helpfulinfo_safe = helpfulinfo_safe_11,
+    helpfulinfo_effec = helpfulinfo_effec_11,
+    
+    feel_surprised_safe = feel_update_safe_1, # NB: DOUBLE CHECK NUMBERS!!!
+    feel_worried_safe = feel_update_safe_2, 
+    feel_angry_safe = feel_update_safe_3, 
+    feel_confused_safe = feel_update_safe_4,
+    
+    feel_surprised_effec = feel_update_effec_1,
+    feel_worried_effec = feel_update_effec_2,
+    feel_angry_effec = feel_update_effec_3,
+    feel_confused_effec = feel_update_effec_4
+  )
+
+
+
+intoFactor <- c(
+  "gender",
+  "education",
+  "manCheckEffec",
+  "manCheckSafety",
+  "selfunderstand_effec", # How easy or difficult did you find it to understand that information_
+  "selfunderstand_safe",
+  "helpfulinfo_safe", # how helpful did you find that information:
+  "helpfulinfo_effec",
+  "feel_surprised_safe",
+  "feel_worried_safe",
+  "feel_angry_safe",
+  "feel_confused_safe",
+  "feel_surprised_effec",
+  "feel_worried_effec", 
+  "feel_angry_effec",
+  "feel_confused_effec",
+  "understand_effective",
+  "reason_update_safe",
+  "reason_update_effec",
+  "Group"
+)
+
+intoNum <- c(
+  "LocationLatitude",
+  "LocationLongitude",
+  "age",
+  "vaxIntentRound1",
+  "vaxIntentRound2",
+  "vaxSafeRound1",
+  "vaxSafeRound2",
+  "vaxEffecRound1",
+  "vaxEffecRound2"
+)
+
+# Turn into numeric
+df2[ , intoNum] <- lapply(df2[ ,intoNum], as.numeric)
+
+# Turn into factor
+df2[ , intoFactor] <- lapply(df2[ ,intoFactor], as.factor)
+
+# Manipulation Check
+
+df2$manCheckSafety_num <- NA
+df2$manCheckSafety_num[df2$manCheckSafety == "Much less less safe than expected"] <- 5
+df2$manCheckSafety_num[df2$manCheckSafety == "A little less safe than expected"] <- 4
+df2$manCheckSafety_num[df2$manCheckSafety == "About as safe as expected"] <- 3
+df2$manCheckSafety_num[df2$manCheckSafety == "A little safer than expected"] <- 2
+df2$manCheckSafety_num[df2$manCheckSafety == "Much safer than expected"] <- 1
+
+df2$manCheckEffec_num <- NA
+df2$manCheckEffec_num[df2$manCheckEffec == "A lot less effective"] <- 5
+df2$manCheckEffec_num[df2$manCheckEffec == "A little less effective"] <- 4
+df2$manCheckEffec_num[df2$manCheckEffec == "About as effective"] <- 3
+df2$manCheckEffec_num[df2$manCheckEffec == "A little more effective"] <- 2
+df2$manCheckEffec_num[df2$manCheckEffec == "A lot more effective"] <- 1
+
+df2$manCheck_num <- ifelse(complete.cases(df2$manCheckSafety_num), df2$manCheckSafety_num,
+                      df2$manCheckEffec_num)
+
+# Rename factor levels - manCheckSafety
+
+levels(df2$manCheckSafety)[levels(df2$manCheckSafety)=="Much less less safe than expected"] <- "Much less safe"
+levels(df2$manCheckSafety)[levels(df2$manCheckSafety)=="A little less safe than expected"] <- "A little less safe"
+levels(df2$manCheckSafety)[levels(df2$manCheckSafety)=="About as safe as expected"] <- "About as safe as expected"
+levels(df2$manCheckSafety)[levels(df2$manCheckSafety)=="A little safer than expected"] <- "A little safer"
+levels(df2$manCheckSafety)[levels(df2$manCheckSafety)=="Much safer than expected"] <- "Much safer"
+
+df2$manCheckSafety <- factor(df2$manCheckSafety, levels = c("Much less safe", "A little less safe", "About as safe as expected", "A little safer", "Much safer"))
+
+# Rename factor levels - manCheckEffec
+
+levels(df2$manCheckEffec)[levels(df2$manCheckEffec)=="A lot less effective"] <- "A lot less"
+levels(df2$manCheckEffec)[levels(df2$manCheckEffec)=="A little less effective"] <- "A little less"
+levels(df2$manCheckEffec)[levels(df2$manCheckEffec)=="About as effective"] <- "About as effective as expected"
+levels(df2$manCheckEffec)[levels(df2$manCheckEffec)=="A little more effective"] <- "A little more"
+levels(df2$manCheckEffec)[levels(df2$manCheckEffec)=="A lot more effective"] <- "A lot more"
+
+df2$manCheckEffec <- factor(df2$manCheckEffec, levels = c("A lot less", "A little less", "About as effective as expected", "A little more", "A lot more"))
+
+
+# rename factor levels
+
+df2$track <-  NA
+df2$track[df2$Group == "Effectiveness / No Uncertainty"] <- "effectiveness"
+df2$track[df2$Group == "Effectiveness / Empty Uncertainty"] <- "effectiveness"
+df2$track[df2$Group == "Effectiveness / Informed Uncertainty"] <- "effectiveness"
+df2$track[df2$Group == "Safety / No Uncertainty"] <- "safety"
+df2$track[df2$Group == "Safety / Empty Uncertainty"] <- "safety"
+df2$track[df2$Group == "Safety / Informed Uncertainty"] <- "safety"
+df2$track[df2$Group == "Control"] <- "no information"
+
+df2$track <- factor(df2$track, 
+                       levels = c("effectiveness", "safety", "no information"))
+
+
+# Creating a new group variable because we renamed the conditions (empty uncertainty -> basic uncertainty)
+
+df2$group <-  NA
+df2$group[df2$Group == "Effectiveness / No Uncertainty"] <- "effectiveness | point estimate"
+df2$group[df2$Group == "Safety / No Uncertainty"] <- "safety | point estimate"
+
+df2$group[df2$Group == "Effectiveness / Empty Uncertainty"] <- "effectiveness | confidence interval"
+df2$group[df2$Group == "Safety / Empty Uncertainty"] <- "safety | confidence interval"
+
+df2$group[df2$Group == "Effectiveness / Informed Uncertainty"] <- "effectiveness | ci and explanation"
+df2$group[df2$Group == "Safety / Informed Uncertainty"] <- "safety | ci and explanation"
+
+df2$group[df2$Group == "Control"] <- "no information at all"
+
+df2$group <- factor(df2$group, 
+                       levels = c("no information at all",
+                                  "effectiveness | point estimate",
+                                  "effectiveness | confidence interval",
+                                  "effectiveness | ci and explanation",
+                                  "safety | point estimate",
+                                  "safety | confidence interval",
+                                  "safety | ci and explanation"
+                                  ))
+
+df2$ci <-  NA
+df2$ci[df2$Group == "Effectiveness / No Uncertainty"] <- "point estimate"
+df2$ci[df2$Group == "Safety / No Uncertainty"] <- "point estimate"
+
+df2$ci[df2$Group == "Effectiveness / Empty Uncertainty"] <- "confidence interval"
+df2$ci[df2$Group == "Safety / Empty Uncertainty"] <- "confidence interval"
+
+df2$ci[df2$Group == "Effectiveness / Informed Uncertainty"] <- "ci and explanation"
+df2$ci[df2$Group == "Safety / Informed Uncertainty"] <- "ci and explanation"
+
+df2$ci[df2$Group == "Control"] <- "no information"
+
+df2$ci <- factor(df2$ci, 
+                       levels = c("no information", "point estimate", "confidence interval", "ci and explanation"))
+
+
+
+df2$age <- 2023 - df2$age
+  
+
+df2$vaxIntentRound1 <- ifelse(complete.cases(df2$vaxIntentRound2), 
+                       df2$vaxIntentRound2,
+                       df2$vaxIntentCtrl)
+
+
+
+# The effect of the bad news (=Round 2) on vaccination intentions
+# df$vaxDif <- df$vaxIntentRound1 - df$vaxIntentRound2 # to get a positive mean
+df2$vaxDif <- df2$vaxIntentRound2 - df2$vaxIntentRound1 # to get a positive mean
+
+# The effect of the bad news (=Round 2) on perceived safety
+df2$safeDif <- df2$vaxSafeRound2 - df2$vaxSafeRound1 # to get a positive mean
+
+# The effect of the bad news (=Round 2) on perceived effectiveness
+df2$effecDif = df2$vaxEffecRound2 - df2$vaxEffecRound1 # to get a positive mean
+
+# Treatment groups
+
+df2$ci2 <-  NA
+df2$ci2[df2$ci == "point estimate"] <- "point estimate"
+df2$ci2[df2$ci == "confidence interval"] <- "confidence interval"
+df2$ci2[df2$ci == "ci and explanation"] <- "ci and explanation"
+
+df2$ci2 <- factor(df2$ci2, 
+                 levels = c("point estimate", "confidence interval", "ci and explanation"))
+
+
+df2$ci2[df2$ci == "confidence interval"] <- "confidence interval"
+df2$ci2[df2$ci == "ci and explanation"] <- "ci and explanation"
+
+df2$ci2 <- factor(df2$ci2, 
+                 levels = c("point estimate", "confidence interval", "ci and explanation"))
+
+# Actual understanding - ONLY IN THE EFFECTIVENESS TRACK!
+df2$understand_effective_short[df2$understand_effective == "The probability of getting COVID is 90% lower among the vaccinated compared to the unvaccinated"] <- "correct"
+df2$understand_effective_short[df2$understand_effective == "If everyone is vaccinated, 90% will not get COVID and 10% will get it"] <- "incorrect"
+df2$understand_effective_short[df2$understand_effective == "It means something else (please specify):"] <- "other"
+df2$understand_effective_short[df2$understand_effective == "Don't know"] <- "other"
+
+df2$understand_effective_short <- factor(df2$understand_effective_short, 
+                 levels = c("correct", "incorrect", "other"))
+
+# Reason for update
+
+df2$reason_update_safe <- factor(df2$reason_update_safe, levels = c(
+  "2 in 10,000 was probably their best guess at the time.", 
+  "They probably lied a bit.",
+  "I don't know."))
+
+df2$reason_update_effec <- factor(df2$reason_update_effec, levels = c(
+  "They exaggerated at first, trying to sell more vaccines",
+  "90% was their best guess at the time", 
+  "Don't know"))
+
+df2$reason_update_effec_short <-  NA
+df2$reason_update_effec_short[df2$reason_update_effec == "90% was their best guess at the time"] <- "best guess"
+df2$reason_update_effec_short[df2$reason_update_effec == "They probably lied a bit."] <- "lied"
+df2$reason_update_effec_short[df2$reason_update_effec == "I don't know."] <- "don't know"
+
+df2$reason_update_effec_short <- factor(df2$reason_update_effec_short, 
+                 levels = c("best guess", "lied", "don't know"))
+
+
+df2$reason_update_safe_short <-  NA
+df2$reason_update_safe_short[df2$reason_update_safe == "2 in 10,000 was probably their best guess at the time."] <- "best guess"
+df2$reason_update_safe_short[df2$reason_update_safe == "They probably lied a bit."] <- "lied"
+df2$reason_update_safe_short[df2$reason_update_safe == "I don't know."] <- "don't know"
+
+df2$reason_update_safe_short <- factor(df2$reason_update_safe_short, 
+                 levels = c("best guess", "lied", "don't know"))
+
+
+# Combining safe and effectiveness variables
+
+df2$reason_update <- ifelse(!is.na(df2$reason_update_effec), df2$reason_update_effec,
+                          ifelse(!is.na(df2$reason_update_safe), df2$reason_update_safe, NA))
+
+df2$reason_update[df2$reason_update == 1] <- "best guess"
+df2$reason_update[df2$reason_update == 2] <- "don't know"
+df2$reason_update[df2$reason_update == 3] <- "lied"
+
+df2$reason_update <- factor(df2$reason_update, 
+                 levels = c("best guess", "lied", "don't know"))
+
+
+df2$helpfulinfo <- ifelse(!is.na(df2$helpfulinfo_safe), df2$helpfulinfo_safe,
+                          ifelse(!is.na(df2$helpfulinfo_effec), df2$helpfulinfo_effec, NA))
+
+df2$selfunderstand <- ifelse(!is.na(df2$selfunderstand_safe), df2$selfunderstand_safe,
+                          ifelse(!is.na(df2$selfunderstand_effec), df2$selfunderstand_effec, NA))
+
+df2$feel_surprised <- ifelse(!is.na(df2$feel_surprised_safe), df2$feel_surprised_safe,
+                          ifelse(!is.na(df2$feel_surprised_effec), df2$feel_surprised_effec, NA))
+
+df2$feel_worried <- ifelse(!is.na(df2$feel_worried_safe), df2$feel_worried_safe,
+                          ifelse(!is.na(df2$feel_worried_effec), df2$feel_worried_effec, NA))
+
+df2$feel_angry <- ifelse(!is.na(df2$feel_angry_safe), df2$feel_angry_safe,
+                          ifelse(!is.na(df2$feel_angry_effec), df2$feel_angry_effec, NA))
+
+df2$feel_confused <- ifelse(!is.na(df2$feel_confused_safe), df2$feel_confused_safe,
+                          ifelse(!is.na(df2$feel_confused_effec), df2$feel_confused_effec, NA))
+
+
+# How easy - difficult respondents found the information
+df2$selfunderstand_num <- as.numeric(as.character(df2$selfunderstand))
+
+df2$selfunderstand <- as.factor(df2$selfunderstand)
+levels(df2$selfunderstand)[levels(df2$selfunderstand)=="1"] <- "0 - Very easy"
+levels(df2$selfunderstand)[levels(df2$selfunderstand)=="2"] <- "1"
+levels(df2$selfunderstand)[levels(df2$selfunderstand)=="3"] <- "2"
+levels(df2$selfunderstand)[levels(df2$selfunderstand)=="4"] <- "3"
+levels(df2$selfunderstand)[levels(df2$selfunderstand)=="5"] <- "4"
+levels(df2$selfunderstand)[levels(df2$selfunderstand)=="6"] <- "5"
+levels(df2$selfunderstand)[levels(df2$selfunderstand)=="7"] <- "6 - Very difficult"
+
+# How helpful respondents found the information
+df2$helpfulinfo_num <- as.numeric(as.character(df2$helpfulinfo))
+
+df2$helpfulinfo <- as.factor(df2$helpfulinfo)
+levels(df2$helpfulinfo)[levels(df2$helpfulinfo)=="1"] <- "0 - Very unhelpful"
+levels(df2$helpfulinfo)[levels(df2$helpfulinfo)=="2"] <- "1"
+levels(df2$helpfulinfo)[levels(df2$helpfulinfo)=="3"] <- "2"
+levels(df2$helpfulinfo)[levels(df2$helpfulinfo)=="4"] <- "3"
+levels(df2$helpfulinfo)[levels(df2$helpfulinfo)=="5"] <- "4"
+levels(df2$helpfulinfo)[levels(df2$helpfulinfo)=="6"] <- "5"
+levels(df2$helpfulinfo)[levels(df2$helpfulinfo)=="7"] <- "6 - Very helpful"
+
+# How surprised people felt # CONTINUE HERE!!
+df2$feel_surprised_num <- as.numeric(as.character(df2$feel_surprised))
+df2$feel_surprised <- as.factor(df2$feel_surprised)
+levels(df2$feel_surprised)[levels(df2$feel_surprised)=="1"] <- "0 - Not at all"
+levels(df2$feel_surprised)[levels(df2$feel_surprised)=="2"] <- "1"
+levels(df2$feel_surprised)[levels(df2$feel_surprised)=="3"] <- "2"
+levels(df2$feel_surprised)[levels(df2$feel_surprised)=="4"] <- "3"
+levels(df2$feel_surprised)[levels(df2$feel_surprised)=="5"] <- "4"
+levels(df2$feel_surprised)[levels(df2$feel_surprised)=="6"] <- "5"
+levels(df2$feel_surprised)[levels(df2$feel_surprised)=="7"] <- "6 - Extremely"
+
+df2$feel_worried_num <- as.numeric(as.character(df2$feel_worried))
+df2$feel_worried <- as.factor(df2$feel_worried)
+levels(df2$feel_worried)[levels(df2$feel_worried)=="1"] <- "0 - Not at all"
+levels(df2$feel_worried)[levels(df2$feel_worried)=="2"] <- "1"
+levels(df2$feel_worried)[levels(df2$feel_worried)=="3"] <- "2"
+levels(df2$feel_worried)[levels(df2$feel_worried)=="4"] <- "3"
+levels(df2$feel_worried)[levels(df2$feel_worried)=="5"] <- "4"
+levels(df2$feel_worried)[levels(df2$feel_worried)=="6"] <- "5"
+levels(df2$feel_worried)[levels(df2$feel_worried)=="7"] <- "6 - Extremely"
+
+df2$feel_angry_num <- as.numeric(as.character(df2$feel_angry))
+df2$feel_angry <- as.factor(df2$feel_angry)
+levels(df2$feel_angry)[levels(df2$feel_angry)=="1"] <- "0 - Not at all"
+levels(df2$feel_angry)[levels(df2$feel_angry)=="2"] <- "1"
+levels(df2$feel_angry)[levels(df2$feel_angry)=="3"] <- "2"
+levels(df2$feel_angry)[levels(df2$feel_angry)=="4"] <- "3"
+levels(df2$feel_angry)[levels(df2$feel_angry)=="5"] <- "4"
+levels(df2$feel_angry)[levels(df2$feel_angry)=="6"] <- "5"
+levels(df2$feel_angry)[levels(df2$feel_angry)=="7"] <- "6 - Extremely"
+
+df2$feel_confused_num <- as.numeric(as.character(df2$feel_confused))
+df2$feel_confused <- as.factor(df2$feel_confused)
+levels(df2$feel_confused)[levels(df2$feel_confused)=="1"] <- "0 - Not at all"
+levels(df2$feel_confused)[levels(df2$feel_confused)=="2"] <- "1"
+levels(df2$feel_confused)[levels(df2$feel_confused)=="3"] <- "2"
+levels(df2$feel_confused)[levels(df2$feel_confused)=="4"] <- "3"
+levels(df2$feel_confused)[levels(df2$feel_confused)=="5"] <- "4"
+levels(df2$feel_confused)[levels(df2$feel_confused)=="6"] <- "5"
+levels(df2$feel_confused)[levels(df2$feel_confused)=="7"] <- "6 - Extremely"
+
+droplevels(df2$track) # Dropping the control group level because we didn't have one in the post-test pre-test
+
+df2$track <- factor(df2$track, levels = c("safety", "effectiveness"))
+
+df2$track2 <- NULL
+df2$track2[df2$track == "effectiveness"] <- "effective"
+df2$track2[df2$track == "safety"] <- "safe"
+df2$track2[df2$track == "no information"] <- "no info"
+
+df2$track2 <- factor(df2$track2, levels = c("effective", "safe", "no info"))
+
+# slightly different numbers because this was in Feb 2023, study one in Dec 2020
+df2$generation[df2$age < 26] <- "Gen Z (1997-2012)"
+df2$generation[df2$age >= 26] <- "Millenials (1981-96)"
+df2$generation[df2$age >= 42] <- "Gen X (1965-80)"
+df2$generation[df2$age >= 57] <- "Baby boomers (1946-64)"
+df2$generation[df2$age >= 77] <- "Silent generation (1928-45)"
+
+df2$generation <- factor(df2$generation, levels = c("Gen Z (1997-2012)", 
+                                                  "Millenials (1981-96)",
+                                                  "Gen X (1965-80)",
+                                                  "Baby boomers (1946-64)",
+                                                  "Silent generation (1928-45)"))
+
+df2$education <- factor(df2$education, levels = c("Degree or equivalent", 
+                                                  "A-level or equivalent",
+                                                  "No qualifications",
+                                                  "Other (please specify)"))
+
+df2$understand_effective <- factor(df2$understand_effective, levels = c(
+  "If everyone is vaccinated, 90% will not get COVID and 10% will get it", 
+  "The probability of getting COVID is 90% lower among the vaccinated compared to the unvaccinated",
+  "It means something else (please specify):", 
+  "Don't know"))
+# Drop variables that could idenfity respondents
+
+drop <- c("LocationLatitude", "LocationLongitude", "StartDate", "EndDate", "Status", "IPAddress", "Progress", "Duration (in seconds)", "Finished", "RecipientLastName", "RecipientFirstName", "RecipientEmail", "ExternalReference", "DistributionChannel", "UserLanguage", "Consent")
+df2 <- df2[,!(names(df2) %in% drop)]
+
+# Create subsets
+df2_safe <- subset(df2, track == "safety")
+df2_effec <- subset(df2, track == "effectiveness")
+
+
+# Save dataset in R
+save(df2, file="/Users/cstedtnitz/Dropbox/1.PhD/1.Papers/Uncertainty/Data/Working/df2")
+
+
+# See if people understood the treatments 0 easy 6 difficult
+
+
+mean(df2$selfunderstand_effec, na.rm = T) # 1.53
+mean(df2$selfunderstand_safe, na.rm = T) # 1.46 --> Similar perception of understanding! 
+
+round(prop.table(table(df2$selfunderstand_effec)), 2) # 76% said 0, 1, or 2 ('easy' side)
+round(prop.table(table(df2$selfunderstand_safe)), 2) # 79% said 0, 1, or 2 ('easy' side)
+
+round(prop.table(table(df2$helpfulinfo_effec)), 2) # 74% said 0, 1, or 2 ('helpful' side)
+round(prop.table(table(df2$helpfulinfo_safe)), 2) # 70% said 0, 1, or 2 ('helpful' side)
+
+round(prop.table(table(df2$understand_effective)), 2) 
+
+```
+
+# Abstract {.unlisted .unnumbered}
+
+Uncertainty is a fact of political life but not a fact of political communication. Elites are prone to make confident predictions and downplay uncertainty about future outcomes, presumably fearing that the acknowledgement of uncertainty would undermine public confidence in their predictions and the evidence it is based on. But this calculation might both exaggerate the costs and downplay the potential benefits of reporting uncertainty. On costs, the evidence from previous studies is mixed; on benefits, previous research has neglected the possibility that, by acknowledging that outcomes may be worse than expected, those communicating uncertainty will dampen public reactions to the bad news. Here, based on a two-stage online survey experiment (N=2167) from December 2020 about COVID-19 vaccines, we find results suggesting that governments are well advised to communicate uncertainty. The costs at Stage 1 were low: reporting a confidence interval around the safety and effectiveness of a hypothetical COVID-19 vaccine did not undermine belief in the statistics or intentions to take the vaccine. And there were indeed benefits at Stage 2: when outcomes turned out to be worse than expected but within that confidence interval, confidence in the vaccine was partly insulated from negative effects. 
+
+**Keywords**: Science communication - Uncertainty - COVID-19 - Vaccines
+
+\newpage
+
+# Introduction {.unlisted .unnumbered}
+
+When governments introduce policies based on uncertain scientific evidence, how open can and should they be about that uncertainty? Five decades after Donald Campbell [-@Campbell1969] pointed out that the difficulties in communicating uncertainty meant that policy reforms “are typically advocated as though they were certain to be successful” (1969, p.409), Jakub Jensen [-@Jensen2008] and colleagues were still lamenting that “public communication of science is generally devoid of caveats, limitations, or other forms of...uncertainty” (2017, p. 40). There is thus a stark contrast between the growing calls in the scientific community for “radical transparency” [@Nature2020; @Manski2019] and the general instinct of political and media elites to conceal rather than to communicate uncertainty [(]@PetersDunwoody2016].  
+
+That instinct is hard to justify on normative or democratic grounds but it is perhaps understandable given the assumptions that politicians are likely to make about public opinion. First, they may suppose that the language of uncertainty – probabilities, margins of error, and so on – adds too much complexity to what may already be hard to communicate to the general public. Second, they may be concerned that admissions of uncertainty will erode public trust in both the information and the policies based on it [@PostMaier2016]. “Why should we follow rules based on predictions that might be wrong?” is the mass reasoning that elites have grounds to fear.
+
+This portrayal of public reactions to uncertainty is open to two lines of criticism. The first is that there is limited evidence that the public reacts so negatively to the reporting of uncertainty. Reviews of the literature [@VanderBles2020, @GustafsonRice2020] point to much more mixed and contingent findings, indicating that the *costs* of reporting uncertainty are less heavy than supposed and indeed may in some cases be avoided altogether. Meanwhile, the second criticism of this portrayal is that it neglects the potential down-the-line *benefits* of reporting uncertainty. The very definition of that uncertainty is that outcomes may end up being worse than first envisaged. The more clearly this was communicated to the public, the less jolted they are likely to be by the bad news, and the more faith they are likely to retain in subsequent communications and predictions. That logic, yet to be tested in the literature on public reactions to uncertainty, is central to this article. 
+
+Our empirical purpose here is therefore to estimate both the costs and potential benefits of reporting uncertainty – and thus to test whether elite reluctance to do so is misplaced. We do so via a two-stage survey experiment, fielded on a sample of 2,165 British adults in December 2020, and based around that country’s emerging COVID-19 vaccination programme. This is a useful test of both the costs and the benefits of reporting uncertainty [@Mahase2020]. As the first vaccines emerged, politicians across the world had to persuade people to take them based on limited information about the safety and effectiveness of those vaccines. They might reasonably have feared that acknowledging any sort of uncertainty, especially around potentially lethal side effects, would aggravate public suspicions that the vaccines were untested or risky – with potentially disastrous consequences for vaccine roll-outs. On the other hand, those communicators were shooting at a moving target. If their initial estimates proved over-optimistic and they had failed to acknowledge the uncertainty, this risked further scepticism or distrust down the road. 
+
+Our treatments manipulated the information available about the effectiveness or safety of a hypothetical COVID-19 vaccine and the dependent variables were respondents’ evaluations of that effectiveness and safety and their willingness to get the vaccine. (While reporting uncertainty may also indirectly shape other important outcomes such as trust in the communicators or in science more broadly, our concern here is more directly with trust in the information communicated and willingness to act on it.) At Stage 1, we investigated the cost side, i.e. whether communicating uncertainty around those effectiveness and safety projections undermined vaccine intentions – and, if so, whether that effect could be mitigated by explaining why such uncertainty was inevitable. At Stage 2, we investigated the benefits side by providing some respondents with an update based on new vaccine data. The updated data were worse than the initial point estimates but just within the confidence intervals around them, meaning that the reporting of uncertainty had prepared respondents for the negative news. 
+
+The experiment produces two encouraging results. First, reporting uncertainty around estimates of the effectiveness and safety of a COVID-19 vaccine did not significantly dent confidence in those initial reports or vaccine intentions. Second, those provided with uncertainty information reacted less negatively – in terms of perceptions of the vaccine as well as intentions to have it – than those who had only seen the over-optimistic point estimate. Both findings provide some instrumental back-up to the normative arguments for communicating uncertainty to the public.   
+
+# Public reactions to the communication of uncertainty  {.unlisted .unnumbered}
+
+We draw a clear distinction in this article between the immediate costs of reporting uncertainty and the down-the-line benefits of doing so. When it comes to reviewing relevant research, the two need very different treatments. There is now a good deal of empirical research into the potential costs of communicating uncertainty in terms of negative public reactions, and our task is to highlight where our study fits into and adds to that literature. By contrast, our hypothesis about the potential benefits of having reported uncertainty when outcomes prove worse than expected has not been empirically tested, and so the task there is to lay out the theoretical arguments underpinning that hypothesis. 
+
+## The avoidable costs   {.unlisted .unnumbered}
+
+For some time now, researchers have assessed the impact of communicating uncertainty on public attitudes and behaviour. The field has been strongly empirically driven, especially since the flurry of work triggered by the pandemic [@Ratcliff2022], and it can be hard to pick out consistent results amid a flurry of mixed and null findings. However, two recent reviews [@VanderBles2020, @GustafsonRice2020] highlight three key variables that can account for much of this inconsistency. The first of these is the type of uncertainty or, closely related, the reason for it. Typologies and terminology vary across studies but the same broad distinctions recur and prove relevant for public reactions. First, those reactions are most negative when uncertainty is due to disagreement among experts [@GustafsonRice2020; @PaekHove2020]. By contrast, there is often no cost of reporting the other main types of uncertainty: aleatory or scientific, where some fundamental randomness in the world means that the future cannot be predicted with any certainty; deficient, where the future might be predicted but there is as yet too little data; and technical or epistemic, where some limits on existing data  – statistical assumptions, methodological choices, sampling bias or variance, measurement error and so on – mean that predictions come with a degree of uncertainty [@Spiegelhalter2017; @VanderBles2019]. These types can overlap, as in the case of the early COVID vaccines where a shortage of data meant heavy reliance on the limited testing done so far. What they have in common is that they are the result of limitations in the data rather than expert disagreement about it. For the purposes of our study, the key points are these: that uncertainty about vaccines was primarily a case of technical uncertainty; and this is the type to which the public is least likely to react negatively [@GustafsonRice2020]. 
+
+The second key variable is the method of conveying uncertainty. Amid a range of possibilities here, the key distinction is between numerical ranges and verbal descriptions, with the latter carrying a heavier cost in terms of public reactions. Examining the effect of reporting uncertainty in news stories about topics like global warming or immigration, -@VanderBles2020 found that using words to describe uncertainty reduced trust in both the statistics and their source, while reporting a numerical range rather than a point estimate had no such negative effect. From a review of uncertainty communication, Dhami and Mandel [-@DhamiMandel2022] conclude that: “The benefits of precise numeric expressions of uncertainty, coupled with receivers’ preference for numeric information when it really matters, suggests that senders ought to embrace numeric precision over vague words if they wish to communicate uncertainty clearly" (2022, p. 514). 
+
+It is probably no coincidence that the reporting of technical uncertainty and of numerical ranges are both lower-cost in terms of public reactions. For one thing, there is a clear connection between the two: numerical ranges are the calculable expression of the uncertainty generated by the limitations in the data available. The other point is more psychological. Both imply a degree of control over uncertainty. The public need not know the term ‘confidence interval’ to have a sense that those communicating a specific range of possibilities are more confident about an uncertain future than those simply asserting its uncertainty. The qualitative analyses of reactions to uncertainty reported by Markon et al. [-@Markon2013] and Maxim and Mansier [-@Maxim2013] both highlight the role of communicator control in reassuring the public. 
+
+The third key variable here is the focus of public reactions – that is, the dependent variable in question. Researchers have investigated the effect of reporting uncertainty on four types of outcomes: trust in the source, trust in science more generally, belief in the specific statistics or claims being reported, and intention to act based on them. There has been more work on the first two and here the evidence is broadly optimistic. Plenty of studies find that reporting of uncertainty has no effect on trust in the messenger (e.g. @VanderBles2020, @Wiedemann2021, @Janssen2021); some others find that it actually boosts such trust [@Jensen2008; @Johnson1995]. These broader dimensions of trust are important but they are in a sense less immediate than the latter two outcomes. In many contexts, of which COVID-19 vaccines are a vivid example, we are most directly interested in whether uncertainty undermines belief in the claims made and affects behaviour based on those claims. That is the focus of our study.  
+
+Yet here there has been less research (see @GustafsonRice2020, Table 2). Indeed, van der Bles et al. in their review explicitly highlight behaviour and compliance as an area needing more systematic research (2019, p. 26). What there is paints a mixed picture. For instance, Morton et al. [-@Morton2011] found people less willing to take environmental action if the probability of extreme weather conditions due to climate change was presented as a range rather than as a point estimate, whereas Joslyn & LeClerc [-@Joslyn2011] found that transparency about uncertainty in weather forecasts increased appropriate precautionary action (while deterring unnecessary action). Then there are null findings: Gustafson and Rice [-@Gustafson2019] found no effect of uncertainty frames on either beliefs in scientific claims or behavioural intentions in the areas of climate change, GM foods and machinery hazards; and Daoust and Bastien [-@Daoust2021] found no effect of graphically depicted confidence intervals around COVID-19 death projections on either trust in the statistics or support for preventive public health measures. 
+
+To recap: there is clearly potential to reduce the costs of reporting uncertainty by emphasising its technical inevitability and expressing it in terms of a numerical range, but we still have only limited evidence of the effectiveness of this approach when it comes to behavioural compliance. Our study thus makes its first contribution by estimating the costs of reporting uncertainty in the crucial case of public beliefs about and willingness to take a COVID-19 vaccine. It goes beyond two similar experimental studies in this area. Petersen et al. [-@Petersen2021] varied the level of transparency in descriptions of a hypothetical COVID-19 vaccine (which is the standard approach given that, due to obvious ethical concerns). They found that transparently communicating even negative features of the COVID-19 vaccines was barely more damaging to vaccine willingness than was vaguely positive information. However, since their manipulation was of transparency rather than uncertainty, these relatively upbeat results may not generalise to our case. There is a more explicit focus on uncertainty in a similar study by Kelp et al. [-@Kelp2021]. However, their more downbeat conclusion – that a high-uncertainty condition erodes vaccine acceptance, especially among the initially reluctant – could reflect confounds between uncertainty and vagueness or positivity. While their low-uncertainty condition reported specific and extremely high effectiveness rates, the high-uncertainty condition reported no numbers and generally resembled the vagueness condition that Petersen et al. [-@Petersen2021] also found to be unpopular. What is needed – and we provide – is a study in which only uncertainty is manipulated: that is, the same specific point estimates are reported but, in the treatment group, accompanied by measures of uncertainty. 
+
+## The potential benefits  {.unlisted .unnumbered}
+
+The second and more innovative contribution of this study is its exploration of the potential down-the-line benefits of reporting uncertainty. That reporting not only shapes the public’s immediate assessments of messages and their messengers; it can also shape the way in which they react to what happens next. Our basic argument is that having acknowledged uncertainty at T1 can serve as an insurance policy against criticism at T2 if initial estimates turn out to have been too optimistic. This is an important point: after all, scientific forecasts and the uncertainty around them are about a future that will emerge – and often in the public glare.  
+
+The theoretical basis for our argument is the point that, when people react to incoming information, their expectations matter. One approach to that point is through evolutionary psychology and the distinction between disposition and surveillance systems (e.g. @ArmonyLeDoux1997; @Reisenzein2019; @RanganathRainer2003). If incoming reports are within the bounds of our expectations, then we can continue to rely on our predispositions. If they are unexpected and potentially threatening, then the surveillance system generates anxiety, which in turn prompts cognitive processing and potentially belief change [@MacKuen2010]. Another approach is via Bayesian reasoning, where unexpected or surprising updates – that is, information that falls a long way from priors – have been shown to generate particular attention [@BaldiItti2010] and have disproportionate impact on belief change and behaviour (e.g. @LoriniCastelfranchi2007; @ChoiHui2014). If the goal of a communicator or policymaker is to deter overreaction to a negative update, then making that update less surprising is a theoretically proven route to doing so. 
+
+These arguments have been applied to communication research, notably by Lamberson and Soroka [-@LambersonSoroka2018] who develop a ‘model of attentiveness to outlying news’. Their contribution is noteworthy here for two reasons. First, they define ‘outlyingness’ in terms of ‘deviation from expectations’ and emphasise the extent of this deviation as the key driver of public opinion – that is, of change in beliefs about the state of the world. Second, the choice of the term ‘outlying’ implies that expectations form a range or interval rather than a point estimate. Incoming information is outlying if (and to the extent that) it falls outside that range of expectations. This is neatly consistent with our central argument which is that, if the result reported in a negative update had previously been included within a confidence interval, then it is no longer ‘outlying’ and so is likely to make less of a dent in beliefs and behavioural intentions.  
+We emphasise those two outcomes because, as noted in the previous section on the costs of reporting uncertainty, they are our central concern in this study. However, it is worth noting that we might expect the same logic to operate with other outcomes such as trust in the messenger or in scientific claims more generally. Communicators who admit that, while they expect a certain outcome, things might end up worse should face a (slightly) more forgiving public if and when that happens. By contrast, communicators having simply to admit that they were wrong face a reputational hit, judging by a recent study in the related field of media retractions [@Freitag2023]. 
+
+Because it is hard to test with the ‘one-shot’ studies that have dominated in research on communicating uncertainty, evidence on this potential ‘insurance policy’ benefit is very scarce. What we do know, courtesy for example of a one-shot study by Kreps and Kriner [-@Kreps2020] using COVID-19 death tolls, is that people react badly to a treatment reporting that a given outcome is worse than was previously estimated. What we do not yet know is whether, had that previous estimate come with a confidence interval that encompassed that outcome, people would be at least somewhat mollified. This is best tested by the two-stage design used in our study, in which uncertainty is reported at the first stage and then the eventual data are reported at the second.
+
+
+# The current study  {.unlisted .unnumbered}
+
+COVID-19 and specifically the mass rollout of vaccinations provided an excellent opportunity to study both the costs and benefits of reporting uncertainty. This was an unusually high-profile case of a government policy requiring mass compliance but based on less than perfect information and requiring shrewd communication [@Larson2020; @Motta2021; @Dudley2021]. There was an especially pressing need to understand whether and how far being transparent about the uncertainties around the new vaccines would impact take-up [@Motta2021;@Petersen2021]. Recent literature on COVID-19 vaccine hesitancy suggests that patients appreciate being informed about the risks of vaccines [@Schwartz2020]. The DELVE Initiative [-@Delve2020] recommended that ‘clear, transparent communication’ be used to address ‘rational doubts and to enable informed decision-making’, and not to hide the potential limitations of vaccines (see also @vanBavel2020). 
+
+In practice, and in line with the general approach in public communication bemoaned at the outset, such transparency was not common. While information about uncertainty around the vital statistics of vaccines was provided by manufacturers and thus available to those who sought it, it was not routinely provided in government communications or media reports. Of course, there are various reasons for reporting only point estimates without confidence intervals. For present purposes, the question is whether reporting such uncertainty would have undermined vaccine willingness in the short term – or helped to sustain it in the medium term had the point estimates proved too optimistic.  
+
+Following Motta’s (2021) finding that safety and effectiveness were two principal drivers of vaccine willingness, we make those the basis for our manipulations. In contrast to previous work, we disentangle the two, exposing respondents to either safety or effectiveness statistics and thus providing two parallel tests of our hypotheses. On both safety and effectiveness tracks, the point estimates on these two criteria are held constant; what is manipulated is whether they are accompanied by confidence intervals.   
+
+Before setting out our hypotheses, we should note three points about our confidence intervals approach to reporting uncertainty. All three derive from its relative precision (cf. the vaguer verbal approach of @Kelp2021, for example): that is, the ranges presented are numerical estimates. First, it is a direct application of the theoretical point about ‘outlying’ news. The point about locating negative outcomes within confidence intervals is to render them no longer outlying. Second, the tendency in the public towards negativity bias and risk aversion [@Soroka2019] means that there is likely to be particular focus on the pessimistic end of the confidence interval. If that pessimistic end is given a numerical expression, particularly one that is not a huge distance from the point estimate, that gives worried citizens a firmer foothold and might make uncertainty easier to cope with – thus reducing the costs of reporting it.  
+
+The third point has more to do with cognitive capacity. The precise meaning of confidence intervals is relatively complicated, needing at least a basic understanding of probability distributions and inferential statistics. This might lead some to doubt whether they are a helpful means of conveying uncertainty. But there is a much easier means of understanding them – as the range between the worst and best case scenarios – which, while not correct, serves as a reasonable heuristic. Hence Daoust and Bastien [-@Daoust2021] make a convincing theoretical case for them helping people to grasp uncertainty – and, as noted above, a convincing empirical case that they do nothing to undermine faith in the reliability of the statistics. 
+
+One thing is to understand the method of presenting uncertainty; another is to understand why uncertainty is there in the first place. The acceptance and processing of a confidence interval may be readier among those who know – or learn – why, especially in the early days of clinical trials based sometimes on restricted samples, the rates of effectiveness and the risk of side-effects can be estimated only imprecisely. To test this conjecture, another innovation in our experiment is that there are two uncertainty treatments: the basic version, simply reporting confidence intervals, and the expanded version in which there is also an explanation of the reasons why an exact estimate makes less sense than a range. 
+
+As already noted, existing research points to heartening null findings when it comes to the effect of reporting uncertainty intervals on trust in information and its source. Ours is a new and acid test given both the unusual public salience of COVID-19 and the extension from trust in sources to planned behaviour – here, vaccination intentions. Nonetheless, that previous work gives grounds for optimistic hypotheses about the costs of reporting trust. 
+
+**H1 (No costs Hypothesis)**: Providing a confidence interval around estimates of vaccine safety/effectiveness does not significantly weaken:
+
+a. willingness to have the vaccine. 
+b. perceptions of the vaccine’s safety/effectiveness. 
+
+The most novel feature of our study is the test for potential benefits of reporting uncertainty. These are likeliest in situations where estimates have to be adjusted downward. Our hypothesis is that, if that adjustment goes below the initial estimate but remains within its confidence interval, the audience reaction to the bad news is dampened. As before, we test the same hypothesis in parallel for updates on safety and effectiveness, and test it for both vaccine intentions and perceptions of that safety or effectiveness. 
+
+**H2 (Benefits Hypothesis)**: Respondents who had seen confidence intervals around estimates of safety/effectiveness show a smaller reduction in:
+
+a. willingness to have the vaccine. 
+b. perceived safety/effectiveness. 
+
+The psychological mechanism driving H2 is the negativity bias referred to earlier. If respondents presented with a range of outcomes anticipate a result towards the more pessimistic end of that range, they will have less Bayesian-style updating to do when the disappointing new data come in. We can test for that mechanism by asking about perceptions of the updated data and the extent to which they fall below what respondents had been led to expect. 
+
+**H3 (Mechanism Hypothesis)**: Respondents who had seen confidence intervals around estimates of safety/effectiveness will be less likely to say that the update revealed the vaccine as less safe/effective than expected.
+
+# Methods {.unlisted .unnumbered}
+
+## Data {.unlisted .unnumbered}
+
+We tested our hypotheses via a two-stage experiment embedded in an online survey. The survey was fielded on 22 December 2020 on a sample of 2,167 UK residents recruited via the Prolific platform (see @Peer2017). In December 2020, medical trials were ongoing and prominent in the media, risks were salient, and there were big question marks around the effectiveness and safety of the vaccines coming up for government approval. Hence, while the questions were about a hypothetical vaccine, the context made this a highly realistic exercise. 
+
+The size of our sample gives the experiment considerable power to detect the costs and benefits of reporting uncertainty. Like other Prolific samples, this one is more diverse than many convenience samples but is still unrepresentative of the UK adult population in a number of (related) ways. (The complete sample characteristics are reported in appendix A.) 
+
+## Experimental design {.unlisted .unnumbered}
+
+The experiment was embedded in a survey that opened with some general questions about COVID-19, including general vaccination intentions, trust in key actors, concern about the pandemic and personal experience of the virus. Then came the two stages of the experiment, separated by a battery of socio-demographic items. These served partly as a buffer to make the information update a little more realistic, and the priming from Stage 1 a little lighter, than if the two stages had been adjacent. 
+
+```{r treatment groups, fig.align = 'center', fig.cap="Treatment Groups", echo=FALSE, results = 'asis'}
+
+# https://haozhu233.github.io/kableExtra/awesome_table_in_pdf.pdf
+
+# round(prop.table(table(df$generalVaxIntent)),2)
+# round(prop.table(table(df$hadCovid2)),2) # 27 per cent believe they have probably had it
+# round(prop.table(table(df$highRisk)),2)
+# round(prop.table(table(df$risk)),2) # 62% are high risk or have a high risk family member
+
+# groups <- table(droplevels(treated)$ci, droplevels(treated)$track)
+groups <- table(droplevels(df)$ci, droplevels(df)$track)
+
+# kable(groups, caption = "Treatment Groups") %>%
+#   kable_styling
+
+# # This works beautifully for pdf but not for word
+# kbl(groups, booktabs = T, caption = "Treatment groups") %>% 
+#   kable_styling(latex_options = "striped", 
+#                 # linesep = "",
+#                 position = "center")
+
+# library(flextable)
+
+# x <- 
+# df %>%
+#   group_by(track, ci) %>%
+#   dplyr::summarize(Freq=n())
+# 
+# x <- as.data.frame(x)
+
+# 
+# groups %>% 
+#   flextable()
+
+# knitr::kable(groups, "simple")
+
+```
+
+[TABLE 1 ABOUT HERE] 
+
+The basic experimental design is set out in Table 1. The crucial treatment was uncertainty and had three levels: a simple point estimate not conveying any uncertainty (‘point estimate’), a point estimate along with a range in which the true estimate is likely to fall (‘confidence interval’), and a point estimate with a range and an explanation why the point estimate could not be exact (‘ci and explanation’). This was cross-manipulated with the two different domains of uncertainty, regarding the effectiveness and safety of the vaccine. There was also a pure control condition – that is, respondents asked about initial willingness to take the vaccine without receiving any data about safety or effectiveness – but, since our focus is on the effect of reporting uncertainty, our comparisons are focused on the three conditions of that manipulation. 
+
+The structure of the experiment was in two stages. Respondents were first prompted to suppose they were offered a COVID-19 vaccine. Next, they were shown some information from the manufacturers about either how effective (in terms of percentage reduction in the transmission rate) or how safe (in terms of the probability of side effects) the (hypothetical) vaccine was estimated to be. Next, respondents were randomly assigned to one of the three uncertainty conditions described above. In line with the recommendations cited earlier [@DhamiMandel2022], the uncertainty information was delivered numerically but not graphically; that is, we reported confidence intervals in the treatment texts rather than showing them on a graph (cf. @Daoust2021). The additions in the explained uncertainty treatment differed a little across the two tracks, reflecting the slightly different reasons for technical uncertainty in the two cases: with effectiveness, it focused on random sampling variance and on biases in the test sample. The safety treatment included parallel wording on sampling bias but also an acknowledgment that side-effects could emerge too slowly to be captured in the trials. Given the potential difficulties in understanding the uncertainty treatments – particularly the longer and more elaborated ‘explained uncertainty’ condition – we fielded a supplementary survey that was aimed specifically at testing comprehension. The reassuring findings of that survey, which pointed to widespread understanding even of the more involved treatments, are reported in Appendix D. 
+
+In order to test the No Costs Hypothesis (H1) at this first stage, we asked respondents how likely they were to get this vaccine and how safe or effective (depending on which track they were on) they felt it was. We should acknowledge that there are numerous drivers of vaccination intentions – many of them unrelated to the kind of threat assessments that we manipulated here [@Friedman2019] – and that, even if the issue was less politicised at the time of our experiment than it is now in the UK, let alone in the US, many respondents will have entered the experiment with both strong opinions on the topic and hence motivations for accepting or rejecting the information we provided [@Taber2006]. However, these should not be disruptive to our main purposes which is to see whether reactions vary across the randomly assigned treatment conditions. Nevertheless, that comparison is made cleaner by trying to iron out any pre-experimental differences in vaccine-relevant predispositions across those conditions, and so our regressions include controls for trust in the NHS, trust in vaccine manufacturers, having contracted the virus, and being ‘high risk’ or having a ‘high risk’ family member. They also include a few other measures of perceived threat, including threat to respondents’ financial situation, feelings about UK Prime Minister Boris Johnson, and two socio-demographic variables (age and gender). 
+
+
+[TABLE 2 ABOUT HERE] 
+
+
+The second stage was based on a putative update from the manufacturer on the vaccine’s record after a few months of its use. Respondents received either safety or effectiveness information, depending on their assigned track. In each case, the updated results were presented as calculations rather than estimations and involved results that were at the negative limit of the previously reported range. There was no additional uncertainty manipulation at this stage; our interest was in the effect of the Stage 1 treatment on reactions to the new information. To test the Benefits Hypothesis (H2) we therefore repeated the questions about the perceived safety or effectiveness of the vaccine, vaccination intention and confidence in that decision.  
+
+It is worth making a couple of remarks about this approach. While the between-subjects design is more common for one-shot information treatment experiments (and is therefore our approach for analysing Stage 1), using repeated measures within the same experiment is well suited to testing the effect of an information update. It has been used in recent experiments testing the effect of updated information on opinions about climate change [e.g. @Tappin2020; @ZhouShen2022] and gene drive [@Dixson2022]. It is most apt in a context where the information is explicitly an update on those things – the effectiveness and safety and thus the attractiveness of the vaccine – that are asked about a second time around. In such contexts, the potential biases with swiftly repeated measures, namely memory effects and consistency biases, do not apply in the same way. Because there is new information bearing on these questions, it is clear to respondents both why the question is being repeated and why belief change would be just as reasonable as belief consistency. This is very different from cases of subtle treatments, not ostensibly related to the dependent variables, in which respondents might be puzzled about why they are being asked the same question again. It is in those situations that respondents might think that they are being tested on consistency or just rely on their past answer (although in fact recent public opinion research suggests that those biases are less common than has been supposed, parallel experiments using within-subjects and between-subjects designs typically leading to similar conclusions [@Clifford2021]. In any event, even at Stage 2, our primary analysis remains a between-subject comparison: that is, not the total amount of belief change but the differences in belief change across the uncertainty conditions. If there were any residual biases from a repeated-measures approach, there is no reason why they would affect the uncertainty and no-uncertainty conditions differently, and so our core comparison is robust. 
+
+# Results {.unlisted .unnumbered}
+
+```{r ols models - stage 1 - incl. baseline condition, warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+# vaxIntentRound1
+
+ols_vaxIntentRound1_ctrl_safe = 
+  lm( 
+    vaxIntentRound1 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="effectiveness"))
+
+ols_vaxIntentRound1_ctrl_effec = 
+  lm( 
+    vaxIntentRound1 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="safety"))
+
+# vaxCertainRound1
+
+ols_vaxCertainRound1_ctrl_safe = 
+  lm( 
+    vaxCertainRound1_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="effectiveness"))
+
+ols_vaxCertainRound1_ctrl_effec = 
+  lm( 
+    vaxCertainRound1_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="safety"))
+
+# vaxSafeRound1
+
+ols_vaxSafeRound1_ctrl = 
+  lm( 
+    vaxSafeRound1 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="effectiveness"))
+
+# vaxEffecRound1
+
+ols_vaxEffecRound1_ctrl = 
+  lm( 
+    vaxEffecRound1 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="safety"))
+
+# vaxInformed
+
+ols_vaxInformed_ctrl_safe = 
+  lm( 
+    vaxInformed_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="effectiveness"))
+
+ols_vaxInformed_ctrl_effec = 
+  lm( 
+    vaxInformed_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="safety"))
+
+# vaxApprove
+
+ols_vaxApprove_ctrl_safe = 
+  lm( 
+    vaxApprove_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="effectiveness"))
+
+ols_vaxApprove_ctrl_effec = 
+  lm( 
+    vaxApprove_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="safety"))
+
+# vaxTransparent
+
+ols_vaxTransparent_ctrl_safe = 
+  lm( 
+    vaxTransparent ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="effectiveness"))
+
+ols_vaxTransparent_ctrl_effec = 
+  lm( 
+    vaxTransparent ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track!="safety"))
+
+```
+
+
+```{r coef plots stage 1 - incl. baseline condition, warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+library(dplyr)
+library(broom) # for tidy
+library(dotwhisker) 
+
+# Main DVs
+ols_vaxIntentRound1_ctrl_safe_tidy <- tidy(ols_vaxIntentRound1_ctrl_safe) %>% filter(term != "(Intercept)") %>% mutate(model = "vaccination \nintentions")
+ols_vaxIntentRound1_ctrl_effec_tidy <- tidy(ols_vaxIntentRound1_ctrl_effec) %>% filter(term != "(Intercept)") %>% mutate(model = "vaccination \nintentions")
+
+ols_vaxSafeRound1_ctrl_tidy <- tidy(ols_vaxSafeRound1_ctrl) %>% filter(term != "(Intercept)") %>% mutate(model = "perceived \nsafety") 
+ols_vaxEffecRound1_ctrl_tidy <- tidy(ols_vaxEffecRound1_ctrl) %>% filter(term != "(Intercept)") %>% mutate(model = "perceived \neffectiveness") 
+
+ols_Round1_safe_main_dvs_tidy <- rbind(ols_vaxIntentRound1_ctrl_safe_tidy[1:3, ], 
+                                  ols_vaxSafeRound1_ctrl_tidy[1:3, ])
+
+ols_Round1_effec_main_dvs_tidy <- rbind(ols_vaxIntentRound1_ctrl_effec_tidy[1:3, ], 
+                                  ols_vaxEffecRound1_ctrl_tidy[1:3, ])
+
+library(modelsummary)
+
+coef_plot_Round1_safe_main_dvs <-
+    dwplot(ols_Round1_safe_main_dvs_tidy,
+         dot_args = list(aes(shape = model), size = 5),
+         whisker_args = list(aes(linetype = model), size = 1.5),
+         line_args = list(alpha = 0.75),
+         vline = geom_vline(xintercept = 0, 
+                            colour = "grey60", 
+                            linetype = 2),
+         dodge_size = 0.4,
+  ) %>% 
+  relabel_predictors(cm_ci_safe) +
+  xlim(-0.9, 0.9) + 
+  xlab("\neffect of the treatments on \na) vaccination intentions (0 low - 6 high) \nb) perceived safety (0 not safe - 6 safe)") + 
+  theme_bw() + 
+  theme(legend.position = "top",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.ticks.y = element_blank(),
+        legend.title = element_blank(),
+        panel.border = element_blank(),
+        plot.title = element_text(hjust = 0.5, color = "#666666"),
+        axis.title.x=element_text(size=12, colour="#666666")
+        # plot.title = element_text(hjust = -1.2)
+        ) +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) + 
+  scale_colour_grey() +
+  labs(title = "Safety Track\n")
+           
+# print(coef_plot_Round1_safe_main_dvs)
+ggsave("coef_plot_Round1_safe_main_dvs.png")
+
+coef_plot_Round1_effec_main_dvs <-
+    dwplot(ols_Round1_effec_main_dvs_tidy,
+         dot_args = list(aes(shape = model), size = 5),
+         whisker_args = list(aes(linetype = model), size = 1.5),
+         line_args = list(alpha = 0.75),
+         vline = geom_vline(xintercept = 0, 
+                            colour = "grey60", 
+                            linetype = 2),
+         dodge_size = 0.4,
+  ) %>% 
+  # relabel_predictors(cm_ci) +
+  relabel_predictors(cm_ci_effec) +
+  xlim(-0.9, 0.9) + 
+    xlab("\neffect of the treatments on \na) vaccination intentions (0 low - 6 high) \nb) perceived effectiveness (0 not effective - 6 effective)") + 
+  theme_bw() + 
+  theme(legend.position = "top",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=11),
+        axis.text.y = element_text(size=11),
+        axis.ticks.y = element_blank(),
+        legend.title = element_blank(),
+        panel.border = element_blank(),
+        plot.title = element_text(hjust = 0.5, color = "#666666"),
+        axis.title.x=element_text(size=11, colour="#666666")
+        # plot.title = element_text(hjust = -1.2)
+        ) +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) + 
+    scale_colour_grey() +
+  ggtitle("Effectiveness Track\n")
+
+# print(coef_plot_Round1_effec_main_dvs)
+ggsave("coef_plot_Round1_effec_main_dvs.png")
+
+```
+
+Since the key outcome variables are on numerical (0-6) scales, it is reasonable to test our hypotheses using OLS regression.  The full models are provided in Appendix B. Figure 1 reports our test of H1. For the safety and effectiveness tracks in turn, it graphs the effect of being in either of the uncertainty conditions (confidence interval only, or confidence interval plus explanation) relative to the no-uncertainty uncondition (point estimate). In each graph there are two dependent variables corresponding to the two parts of H1: a) vaccination intentions and b) acceptance of the statistics – that is, perceived safety or effectiveness. 
+
+```{r ols models - stage 1, warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+ols_vaxIntentRound1_safe = 
+  lm( 
+    vaxIntentRound1 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+require(foreign)
+require(ggplot2)
+require(MASS)
+require(Hmisc)
+require(reshape2)
+
+# summary(ols_vaxIntentRound1_safe)
+
+ols_vaxCertainRound1_safe = 
+  lm( 
+    vaxCertainRound1_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# msummary(ols_vaxCertainRound1_safe)
+
+ols_vaxSafeRound1_safe = 
+  lm( 
+    vaxSafeRound1 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# summary(ols_vaxSafeRound1_safe)
+
+ols_vaxInformed_safe = 
+  lm( 
+    vaxInformed_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# summary(ols_vaxInformed_safe)
+
+ols_vaxApprove_safe = 
+  lm( 
+    vaxApprove_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# summary(ols_vaxApprove_safe)
+
+ols_vaxTransparent_safe = 
+  lm( 
+    vaxTransparent ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# 2) Effectiveness track
+
+ols_vaxIntentRound1_effec = 
+  lm( 
+    vaxIntentRound1 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# msummary(ols_vaxIntentRound1_effec)
+
+ols_vaxCertainRound1_effec = 
+  lm( 
+    vaxCertainRound1_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# msummary(ols_vaxCertainRound1_effec)
+
+ols_vaxEffecRound1_effec = 
+  lm( 
+    vaxEffecRound1 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# msummary(ols_vaxEffecRound1_effec)
+
+ols_vaxInformed_effec = 
+  lm( 
+    vaxInformed_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# summary(ols_vaxInformed_effec)
+
+ols_vaxApprove_effec = 
+  lm( 
+    vaxApprove_3 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# summary(ols_vaxApprove_effec)
+
+ols_vaxTransparent_effec = 
+  lm( 
+    vaxTransparent ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# summary(ols_vaxTransparent_effec)
+
+```
+
+
+```{r coef plots - stage 1 - safety, fig.cap="Effect of acknowledging uncertainty on vaccination intentions - Safety Track", warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+library(dplyr)
+library(broom) # for tidy
+library(dotwhisker) 
+
+ols_vaxIntentRound1_safe_tidy <- tidy(ols_vaxIntentRound1_safe) %>% filter(term != "(Intercept)") %>% mutate(model = "vaccination \nintentions")
+ols_vaxCertainRound1_safe_tidy <- tidy(ols_vaxCertainRound1_safe) %>% filter(term != "(Intercept)") %>% mutate(model = "confidence in \ndecision")
+ols_vaxSafe_safe_tidy <- tidy(ols_vaxSafeRound1_safe) %>% filter(term != "(Intercept)") %>% mutate(model = "perceived \nsafety") 
+
+ols_Round1_safe <- rbind(ols_vaxIntentRound1_safe_tidy[1:2, ], 
+                         ols_vaxSafe_safe_tidy[1:2, ] 
+                         )
+
+library(modelsummary)
+
+coef_plot_Round1_safe <-
+    dwplot(ols_Round1_safe,
+         dot_args = list(aes(shape = model), size = 5),
+         whisker_args = list(aes(linetype = model), size = 1),
+         line_args = list(alpha = 0.75),
+         vline = geom_vline(xintercept = 0, 
+                            colour = "grey60", 
+                            linetype = 2),
+         dodge_size = 0.4,
+  ) %>% 
+  relabel_predictors(cm_ci_safe) +
+  xlim(-0.7, 0.7) + 
+      xlab("\neffect of the treatments on \na) vaccination intentions (0 low - 6 high) \nb) perceived safety (0 not safe - 6 safe)") + 
+  theme_bw() +
+  theme(legend.position = "top",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.ticks.y = element_blank(),
+        legend.title = element_blank(),
+        panel.border = element_blank(),
+        plot.title = element_text(hjust = 0.5, color = "#666666"),
+        axis.title.x=element_text(size=12, colour="#666666")
+        ) +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) +
+    scale_colour_grey() +
+  ggtitle("Safety Track\n")
+
+# print(coef_plot_Round1_safe)
+ggsave("coef_plot_Round1_safe.png")
+```
+
+
+```{r coef plots - stage 1 - effectiveness, fig.cap="Effect of acknowledging uncertainty on vaccination intentions - Effectiveness Track", warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+ols_vaxIntentRound1_effec_tidy <- tidy(ols_vaxIntentRound1_effec) %>% filter(term != "(Intercept)") %>% mutate(model = "vaccination \nintentions") 
+ols_vaxCertainRound1_effec_tidy <- tidy(ols_vaxCertainRound1_effec) %>% filter(term != "(Intercept)") %>% mutate(model = "confidence \nin decision")
+ols_vaxEffecRound1_effec_tidy <- tidy(ols_vaxEffecRound1_effec) %>% filter(term != "(Intercept)") %>% mutate(model = "perceived \neffectiveness") 
+
+ols_Round1_effec <- rbind(ols_vaxIntentRound1_effec_tidy[1:2, ], 
+                         ols_vaxEffecRound1_effec_tidy[1:2, ]
+                         )
+
+coef_plot_Round1_effec <-
+  dwplot(ols_Round1_effec,
+         dot_args = list(aes(shape = model), size = 5),
+         whisker_args = list(aes(linetype = model), size = 1), # 1.5
+         line_args = list(alpha = 0.75),
+         vline = geom_vline(xintercept = 0, 
+                            colour = "grey60", 
+                            linetype = 2
+                            ),
+         dodge_size = 0.4,
+  ) %>% 
+  relabel_predictors(cm_ci_effec) +
+  xlim(-0.7, 0.7) + 
+  xlab("\neffect of the treatments on \na) vaccination intentions (0 low - 6 high) \nb) perceived effectiveness (0 not effective - 6 effective)") + 
+  theme_bw() + 
+  theme(legend.position = "top",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.ticks.y = element_blank(),
+        legend.title = element_blank(),
+        panel.border = element_blank(),
+        plot.title = element_text(hjust = 0.5, color = "#666666"),
+        axis.title.x=element_text(size=12, colour="#666666")
+        ) +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) + # nrow = 2
+    # scale_color_colorblind() 
+  scale_colour_grey() +
+  ggtitle("Effectiveness Track\n") 
+
+# print(coef_plot_Round1_effec)
+ggsave("coef_plot_Round1_effec.png")
+
+```
+
+
+```{r coef plots stage 1 - side by side, warning = FALSE, message = FALSE, echo = FALSE, fig.height=6, fig.cap="Effect of uncertainty treatments (relative to point estimate condition) on vaccination intentions and perceived safety/effectiveness."} 
+
+library(gridExtra)
+
+grid.arrange(coef_plot_Round1_safe, coef_plot_Round1_effec, ncol=2)
+
+```
+First, then, does adding a confidence interval to the safety or effectiveness estimates drive down vaccination intentions? It does not. Neither the stand-alone confidence interval nor the fuller explained uncertainty version carried any cost in terms of vaccination intentions. If anything, the results fall on the benefits side of the ledger. This was true for both tracks, confirming our first ‘no costs’ hypothesis (H1a). How about perceptions of vaccine safety and effectiveness (H1b)? Here, our results are again largely null but with one exception: in the ‘safety’ track, the explained confidence interval treatment had a small but just about significant negative impact on perceptions of safety (of 0.16 points along the seven-point scale).  One reason why the explanation may have dented safety perceptions is that it explicitly mentions that patients might develop side effects later on. However, since the confidence intervals for the two uncertainty treatments themselves overlap, we should hesitate before concluding that that explanation in itself has an effect. Hence, we accept our second ‘no costs’ hypothesis (H1b) for the effectiveness track and only marginally and conditionally reject it for the safety track. 
+
+Overall, then, our data suggests that communicating uncertainty carries very little cost in the short run and, in particular, does nothing to dent vaccine willingness. We now turn to the Stage 2 update to examine what happens if, a few months after a new vaccine is approved, the level of effectiveness drops to the bottom or the share of patients developing serious side effects climbs to the top of those respective confidence intervals? Does acknowledging uncertainty offer a benefit by buffering against bad news?  
+
+The first thing to check is whether overall the update had the expected negative impact on vaccine intentions and perceptions of safety and effectiveness. Across the sample, paired-samples t-tests recorded statistically significant declines in all three dependent variables, although vaccination intentions fell by less (0.14 points) than the estimates of safety (0.24) or effectiveness (0.27) which were more directly informed by the update.  None of these declines is particularly sharp, which might already be an indication that the uncertainty treatments had prepared respondents for the new information and thereby helped to sustain willingness to accept the vaccine.  
+
+
+```{r t tests round 1, include=FALSE} 
+
+# results='hide'
+
+# Average perceptions of vaccine safety, and effectiveness, and vaccination intentions
+mean(subset(df, group == "effectiveness | no uncertainty")$effecDif, na.rm = T) # 0.39
+mean(subset(df, group == "effectiveness | no uncertainty")$vaxDif, na.rm = T) # 0.25
+
+mean(subset(df, group == "safety | no uncertainty")$safeDif, na.rm = T) # 0.30
+mean(subset(df, group == "safety | no uncertainty")$vaxDif, na.rm = T) # 0.17
+
+
+# Running paired t-tests to see if the negative update decreased perceived effectiveness, perceived safety, and vaccine take-up.
+
+# http://www.sthda.com/english/wiki/paired-samples-t-test-in-r
+
+# (1) Did vaccination intentions go down after the negative update? YES! 
+
+# Among all respondents
+# t.test(df$vaxIntentRound1, df$vaxIntentRound2, paired = TRUE, alternative = "two.sided")
+
+# Among respondents in the effectiveness track who got the point estimate
+t.test(subset(df, group == "effectiveness | point estimate")$vaxIntentRound1, 
+       subset(df, group == "effectiveness | point estimate")$vaxIntentRound2, 
+       paired = TRUE, alternative = "two.sided")
+
+# Among respondents in the safety track who got the point estimate
+t.test(subset(df, group == "safety | point estimate")$vaxIntentRound1, 
+       subset(df, group == "safety | point estimate")$vaxIntentRound2, 
+       paired = TRUE, alternative = "two.sided")
+
+
+# Did the ci & explanation condition eliminate the negative effect of the negative update on vaccination intentions? -- YES! Results are no longer significant
+
+t.test(subset(df, group == "effectiveness | ci and explanation")$vaxIntentRound1, 
+       subset(df, group == "effectiveness | ci and explanation")$vaxIntentRound2, 
+       paired = TRUE, alternative = "two.sided")
+
+
+# (2) Did perceived effectiveness go down after the negative update? YES! 
+# t.test(df$vaxEffecRound1, df$vaxEffecRound2, paired = TRUE, alternative = "two.sided")
+t.test(subset(df, group == "effectiveness | point estimate")$vaxEffecRound1, 
+       subset(df, group == "effectiveness | point estimate")$vaxEffecRound2, 
+       paired = TRUE, alternative = "two.sided")
+
+# (3) Did perceived safety go down after the negative update? YES! 
+# t.test(df$vaxSafeRound1, df$vaxSafeRound2, paired = TRUE, alternative = "two.sided")
+t.test(subset(df, group == "safety | point estimate")$vaxSafeRound1, 
+       subset(df, group == "safety | point estimate")$vaxSafeRound2, 
+       paired = TRUE, alternative = "two.sided")
+
+
+# Transparency
+# Respondents in the safety track thought of the communication as more open and transparent than respondents in the effectiveness track.
+t.test(subset(df, track == "safety")$vaxTransparent, 
+       subset(df, track == "effectiveness")$vaxTransparent, 
+       alternative = "two.sided")
+
+# m(safety)=3.75, m(effectiveness)=3.93, t(1624)=-2.28, p=0.02
+
+```
+
+
+```{r ols models round 2, warning = FALSE, message = FALSE, echo = FALSE} 
+
+# 1) Safety Track
+
+# Vaccination intentions
+ols_vaxIntentRound2_safe = 
+  lm( 
+    vaxIntentRound2 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# Difference in vaccination intentions
+ols_vaxDif_safe= 
+  lm( 
+    vaxDif ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# Certainty
+ols_vaxCertainRound2_safe = 
+  lm( 
+    vaxCertainRound2_num ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# Difference in certainty
+ols_certainDif_safe = 
+  lm( 
+    vaxCertainDif ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# Perceived safety
+ols_vaxSafeRound2_safe = 
+  lm( 
+    vaxSafeRound2 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# Difference in perceived safety
+ols_safeDif_safe = 
+  lm( 
+    safeDif ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+
+# 2) Effectiveness Track
+
+# Vaccination intentions
+ols_vaxIntentRound2_effec = 
+  lm( 
+    vaxIntentRound2 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# Difference in vaccination intentions
+ols_vaxDif_effec = 
+  lm( 
+    vaxDif ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+
+# Certainty
+ols_vaxCertainRound2_effec = 
+  lm( 
+    vaxCertainRound2_num ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# Difference in certainty
+ols_certainDif_effec = 
+  lm( 
+    vaxCertainDif ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+
+# Perceived effectiveness
+ols_vaxEffecRound2_effec = 
+  lm( 
+    vaxEffecRound2 ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# Difference in perceived effectiveness
+ols_effecDif_effec = 
+  lm( 
+    effecDif ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# 3) Pooled Data - Both Tracks
+
+# Vaccination intentions
+ols_vaxIntentRound2 = 
+  lm( 
+    vaxIntentRound2 ~
+      track + 
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track != "control"))
+
+
+# Difference in vaccination intentions
+ols_vaxDif = 
+  lm( 
+    vaxDif ~
+      track + 
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track != "control"))
+
+
+# Certainty
+ols_vaxCertainRound2 = 
+  lm( 
+    vaxCertainRound2_num ~
+      track +
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track != "control"))
+
+# Difference in certainty
+ols_certainDif = 
+  lm( 
+    vaxCertainDif ~
+      track +
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track != "control"))
+
+
+# 4) Manipulation Check
+
+ols_manCheckSafe = 
+  lm( 
+    manCheckSafety_num ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "safety"))
+
+# summary(ols_manCheckSafety)
+
+
+# Manipulation Check
+ols_manCheckEffec = 
+  lm( 
+    manCheckEffec_num ~
+      ci + 
+      male + 
+      age +
+      risk +
+      hadCovid_num +
+      trust_Comp + 
+      trust_NHS + 
+      threat_Rights_num + 
+      threat_Values_num + 
+      threat_MyHealth_num + 
+      threat_FinSit_num + 
+      threat_ComLife_num + 
+      like_BorisJohnson, 
+    data=subset(df, track == "effectiveness"))
+
+# summary(ols_manCheckEffec)
+
+models_dif <- list()
+
+models_dif[["(1) want vaccine"]] <- ols_vaxDif_safe
+models_dif[["(2) certain"]] <- ols_certainDif_safe
+models_dif[["(3) it's safe"]] <- ols_safeDif_safe
+# models_dif[["(4) how much less safe"]] <- ols_manCheckSafe
+
+models_dif[["(1) want vaccine"]] <- ols_vaxDif_effec
+models_dif[["(2) certain"]] <- ols_certainDif_effec
+models_dif[["(3) it's effective"]] <- ols_effecDif_effec
+# models_dif[["(4) how much less effective"]] <- ols_manCheckEffec
+
+# msummary(models_dif)
+
+```
+
+<!-- \newpage -->
+
+```{r coef plots - stage 2 - safety, fig.cap="Safety Track",  warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+ols_vaxIntentRound2_safe_tidy <- tidy(ols_vaxIntentRound2_safe) %>% filter(term != "(Intercept)") %>% mutate(model = "vaccination \nintentions") 
+
+ols_vaxSafeRound2_safe_tidy <- tidy(ols_vaxSafeRound2_safe) %>% filter(term != "(Intercept)") %>% mutate(model = "perceived \nsafety") 
+
+models_stage2_safe <- rbind(ols_vaxIntentRound2_safe_tidy[1:2, ], 
+                            ols_vaxSafeRound2_safe_tidy[1:2, ])
+
+coef_plot_stage2_safe <-
+  dwplot(models_stage2_safe,
+         dot_args = list(aes(shape = model), size = 5),
+         whisker_args = list(aes(linetype = model), size = 1.5),
+         line_args = list(alpha = 0.75),
+         vline = geom_vline(xintercept = 0, 
+                            colour = "grey60", 
+                            linetype = 2),
+         dodge_size = 0.8,
+  ) %>% 
+  relabel_predictors(cm_ci_safe) +
+  xlim(-0.7, 0.7) + 
+  theme_bw() + 
+  theme(legend.position = "top",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.ticks.y = element_blank(),
+        legend.title = element_blank(),
+        panel.border = element_blank(),
+        plot.title = element_text(hjust = 0.5, color = "#666666"),
+        axis.title.x=element_text(size=12, colour="#666666")
+        ) +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) +
+  scale_colour_grey() + 
+    xlab("\neffect of the treatments on \na) vaccination intentions (0 low - 6 high) \nb) perceived safety (0 not safe - 6 safe)") + 
+  ggtitle("Safety Track\n") 
+
+# print(coef_plot_stage2_safe)
+ggsave("coef_plot_stage2_safe.png")
+
+
+```
+
+```{r coef plots - stage 2 - effectiveness, fig.cap="Effectiveness Track", warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+ols_vaxIntentRound2_effec_tidy <- tidy(ols_vaxIntentRound2_effec) %>% filter(term != "(Intercept)") %>% mutate(model = "vaccination \nintentions")
+
+ols_vaxEffecRound2_effec_tidy <- tidy(ols_vaxEffecRound2_effec) %>% filter(term != "(Intercept)") %>% mutate(model = "perceived \neffectiveness")
+
+models_stage2_effec <- rbind(ols_vaxIntentRound2_effec_tidy[1:2, ], 
+                             ols_vaxEffecRound2_effec_tidy[1:2, ])
+
+coef_plot_stage2_effec <-
+  dwplot(models_stage2_effec,
+         dot_args = list(aes(shape = model), size = 5),
+         whisker_args = list(aes(linetype = model), size = 1.5),
+         line_args = list(alpha = 0.75),
+         vline = geom_vline(xintercept = 0, 
+                            colour = "grey60", 
+                            linetype = 2),
+         dodge_size = 0.8,
+  ) %>% 
+  relabel_predictors(cm_ci_effec) +
+  xlim(-0.7, 0.7) + 
+  theme_bw() + 
+  theme(legend.position = "top",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.ticks.y = element_blank(),
+        legend.title = element_blank(),
+        panel.border = element_blank(),
+        plot.title = element_text(hjust = 0.5, color = "#666666"),
+        axis.title.x=element_text(size=12, colour="#666666")
+        ) +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) + # nrow = 2
+    # scale_color_colorblind() 
+  scale_colour_grey() +
+    xlab("\neffect of the treatments on \na) vaccination intentions (0 low - 6 high) \nb) perceived effectiveness (0 not effective - 6 effective)") + 
+  ggtitle("Effectiveness Track\n") 
+
+# print(coef_plot_stage2_effec)
+ggsave("coef_plot_stage2_effec.png")
+```
+
+
+```{r coef plots stage 2 - side by side, warning = FALSE, message = FALSE, echo = FALSE, fig.height=6, fig.cap="Effects of uncertainty treatments (relative to point estimate condition) on Stage 2 vaccination intentions and perceived safety/effectiveness"} 
+
+library(gridExtra)
+
+grid.arrange(coef_plot_stage2_safe, coef_plot_stage2_effec, ncol=2)
+
+```
+A more direct test of this is provided by Figure 2. It runs directly parallel to Figure 1: that is, it shows the effect of having seen an uncertainty treatment on vaccine intentions and perceived safety and effectiveness – but this time as reported at Stage 2. On the effectiveness track, there is clear support for H2a: those who had received either uncertainty treatment were significantly likelier to want the vaccine after the Stage 2 update than those reading a point-estimate prediction that proved over-optimistic. With that same outcome variable of vaccine intentions, the results are similar but not quite significant on the safety track. On balance, though, there is encouraging support for the first part of our benefits hypothesis, H2a. There is rather little support for H2b, by contrast. Even though the update more directly concerned the safety and effectiveness variables, there is little sign – except in the borderline case of the explained confidence interval on the effectiveness track – that those receiving an uncertainty treatment maintained more positive evaluations of the vaccine after the update. 
+
+H3 is intended to test the mechanism through which reporting uncertainty at Stage 1 delivers benefits at Stage 2. While those benefits have now been revealed as conditional, there is enough support for H2a to make H3 worth testing. Table 3 presents two simple crosstabulations, in each case pairing the uncertainty treatment with a post-update question asking respondents whether the manufacturer’s update had revealed the vaccine as more safe/effective or less safe/effective than expected. Two points are clear from the tables. The first is the support in each case for H3. Those who had seen an uncertainty range that encompassed the updated figures were disproportionately likely to say that the vaccine was as safe or effective ‘as expected’ rather than ‘a little less’ safe or effective. (These differences are obviously the main drivers of the significant c2 tests for each crosstabulation.) Second, there is an explanation here for the generally more muted or null results on the safety track: that is, not only is the treatment effect in the crosstabulation less strong but the safety update generally left respondents more unmoved overall, with quite a few even in the point-estimate condition reading the update ‘as expected’. This may be because even 6 in 10,000 also seems like such a small proportion that it is similar to the 2 in 10,000 originally estimated.  
+
+
+# Conclusion {.unlisted .unnumbered}
+
+There is a strong ethical and democratic case to be made for transparency in the public communication of science – including reporting the uncertainty surrounding scientific estimates and forecasts. Alongside those arguments, here we provide evidence of an instrumental case for communicating uncertainty. It has two planks. The first is that reporting uncertainty carries little cost in terms of trust in data and willingness to act on it – in this case, to have a COVID-19 vaccine. The second is that it may offer benefits down the line. In this case, having reported uncertainty around initial estimates helped to sustain vaccination intentions when those estimates have to be corrected downward. And our data isolated the cognitive mechanism driving this: the pessimistic lower reaches of those uncertainty intervals became part of people’s expectations such that, when the update came in, it was less likely to be an unpleasant surprise.  
+
+This study contributes to a small but growing literature providing empirical fuel for the normative mission to persuade political communicators to present proposals and make claims in a less bombastic fashion. They should know that acknowledging uncertainty need not erode trust and legitimacy but may in fact bolster them. From this policy perspective, two other of our findings are worthy of comment. The first is the similarity of results across our basic and explained uncertainty treatments. Not only can people handle uncertainty but, importantly, they grasp its implications without needing elaboration. This is very useful for communicators given the time and space needed for that elaboration. Simple confidence intervals – even expressed verbally (and hence more economically than via a graph) – prove an intuitive means of conveying the likely range of outcomes.  All of this is consistent with studies showing that clarity and brevity often prove sufficient. Heavier informational treatments have often had minimal impact on vaccine intentions, even if they leave audiences feeling more informed [@Kerr2021; @Loomba2021].
+
+The second is the fact that the benefits of reporting uncertainty were more limited in the safety context. Overall, the data give the impression that respondents were simply doing less cognitive processing of the treatments on the safety track – they were perhaps feeling rather than analysing risk [@Slovic2010]. The upbeat point is that, even in the safety context, there were no costs of reporting uncertainty: any heightened sense of anxiety did not create an inability to cope with uncertainty. This is important since talking about safety is not really avoidable for policymakers. If or when side effects emerge, no democratic government can contain that information. 
+There are three limitations of our study worth noting here, all three relating to different facets of external validity. One relates to the nature of our sample. We noted the high levels of vaccine willingness on show. This is partly contextual: the UK was a relatively vaccine-willing country anyway and sleeves in December 2020 were being enthusiastically rolled up as the vaccine programme got under way. But it may also reflect the particular vaccine willingness in a relatively educated and liberal sample. It is conceivable that a more vaccine-hesitant sample would have baulked at the uncertainty that these respondents took in their stride. However, given that vaccine intentions are much less politicised in the UK (as in much of Europe) than in the US, sampling bias seems unlikely to have made a big difference to the effects on show here. 
+
+The second is the fact that we could only examine vaccination intentions, not actual vaccination decisions. While this is a common limitation given the expense and difficulty of panel studies, it is true that the ideal design would track respondents across the real time during which new information – whether about the safety and effectiveness of a vaccine, or about any politically salient outcome – emerges. In a survey experimental context like this, indeed, vaccination intentions could be seen more as an attitude or feeling about the vaccine than as an intention highly proximate to behaviour. However, this does not undermine our findings because we were interested in exactly those feelings – and how they were affected by the communication of uncertainty. Of course, many other factors could subsequently intervene in the real world, pushing people towards or away from a vaccine, but this is a point about attitude-behaviour disjuncture rather than a criticism of survey experiments per se. 
+
+Third, the COVID-19 pandemic represents (thankfully) an unusual case in terms of the nature and especially the salience of the predictions being communicated. Vaccine effectiveness and safety mattered a great deal to governments and citizens alike. The statistics being reported had direct implications for behaviour – unlike, say, economic forecasts which might influence consumer behaviour at the margins but are probably less immediately relevant. What is unclear pending further research is the implications of this for generalizing our findings. On the one hand, it could that the heightened anxiety in this case triggered more cognitive processing of the uncertainty information [@MacKuen2010]. In that case, our advice would be less clear-cut in situations where the incentive for grasping and coping with uncertainty is weaker. A rival reading is that this case represents a stiff test of the case for communicating uncertainty. If citizens could respond sensibly to this information even in such a febrile context, then we would recommend reporting it as a general rule.  
+
+
+# References {.unlisted .unnumbered}
+
+<div id="refs"></div>
+
+\newpage
+
+# Appendix {.unlisted .unnumbered}
+
+<!-- \pagenumbering{arabic} -->
+
+\setcounter{page}{0}
+\pagenumbering{Roman}
+<!-- \singlespacing -->
+\onehalfspacing
+
+
+\tableofcontents
+
+<!-- Restarting the page number count from zero -->
+<!-- https://ourcodingclub.github.io/tutorials/rmarkdown-dissertation/ -->
+
+<!-- \newpage -->
+
+# A - Sample characteristics
+
+Table 1 shows the sample characteristics for the main study. Just over 60% were women; overwhelmingly (84%) white (English, Welsh, Irish, Northern Irish, British, or other white background), 47% were Millenials,  27% Gen Xers and 16% Baby boomers. Just over half (56%) of the sample had a university degree; just under a third had an a-level or equivalent qualification (30%). At the time (in December 2020) just under a third (29%) thought they had probably, or certainly had covid. About half (54%) of the sample had at least one high-risk family member.  
+
+```{r summary stats, caption = 'Sample characteristics', warning = FALSE, message = FALSE, echo = FALSE, results = 'asis'}
+
+# https://vincentarelbundock.github.io/modelsummary/articles/datasummary.html#background
+
+library(modelsummary)
+library(tidyverse)
+library(estimatr)
+
+summaryTableData <-
+  df %>%
+  dplyr::select(`Track` = track2, 
+                `Treatment group` = ci2, 
+                `Gender` = gender,
+                `Generation` = generation,
+                `Ethnicity` = ethnicity_short,
+                # `Employment` = employment_short,
+                `Education` = education,
+                # `Brexit views` = brexit,
+                `Had Covid?` = hadCovid3,
+                `High risk?` = highRisk2
+                # `Work affected?` = workAffected
+                )
+# 
+# datasummary_balance(~ 1, 
+#                     data = summaryTableData,
+#                     title = "Summary Statistics")
+
+datasummary_balance(~Track, 
+                    data = summaryTableData,
+                    title = "Summary Statistics")
+
+```
+
+
+\newpage
+
+# B - Full results
+
+The OLS models below show the effect of providing information about safety or effectiveness statistics on the following outcome variables: 
+
+- **vaccination intentions** [vaxIntentRound1 and vaxIntentRound2]. 
+- **perceived safety** [vaxSafeRound1 and vaxSafeRound1]
+- **perceived effectiveness** [vaxEffecRound1 and vaxEffecRound1]
+- **drop in vaccination intentions** [vaxDif = vaxIntentRound2 - vaxIntentRound1]. 
+- **drop in perceived safety** [safeDif = = vaxSafeRound2 - vaxSafeRound1]
+- **drop in perceived effectiveness** [effecDif = vaxEffecRound2 - vaxEffecRound1]
+<!-- - **perceived informedness** [vaxInformed] -->
+<!-- - **support for approving the vaccine** [vaxApprove] -->
+<!-- - **perceived transparency** [vaxTransparent]  -->
+
+All models include the following control variables:
+  
+- **Demographics**: Gender, age
+
+- **Vulnerability**: Likelihood of having contracted the virus [hadCovid], and being or 'high risk' or having a 'high risk' family member. This variable was based on the highRisk variable and took on a value of 1 if the respondent and/or at least one family member is 'high risk', 0 otherwise.
+
+- **Political opinions**: Support for Boris Johnson [like_BorisJohnson]. We also asked for feelings for a number of other individuals including Chief medical officer for England Chris Whitty but omitted those due to missing data. We excluded a Brexit variable as it was highly correlated with support for the Prime Minister. 
+      
+- **Realistic threat**: Our survey included five measures of realistic threat, adapted from Kachanoff, Bigman, Kapsaskis, and Grays' (2020): How serious a threat is COVID-10 to 'your personal health' [threat_MyHealth], 'your financial situation' [threat_FinSit], 'day-to-day life in your local community' [threat_ComLife], 'the health of the British people' [threat_BritHealth], and 'the British economy' [threat_Econ]. Kachanoff and colleagues designed these questions for a US context [see @Kachanoff2020]. They were also used in the Pew Research Poll in March 2020 (Wave 63.5, March 10, 2020). To adapt them to a British sample, we changed the word 'American' to 'British' where necessary. We combined the five measures in an additive scale of perceived 'realistic threats'. The internal consistency of the five measures was lower than expected (a=.5), so we chose to use the individual items rather than the scale for our OLS regression models. Due to multicollinearity issues we did not include all five measures but only three: threat_MyHealth, threat_FinSit, and threat_Econ. 
+
+- **Symbolic threat**: Our survey also included three measures of symbolic threat, adapted from Kachanoff, Bigman, Kapsaskis, and Grays' (2020): How serious a threat is COVID-19 to 'British values and traditions' [threat_Values], to 'The rights and freedoms of British people' [threat_Rights], and to 'British democracy' [threat_Democracy]. (Note that Kachanoff and colleagues had used an additional two measures that were less suitable for a British context: How serious a threat is COVID-19 to 'What it means to be American', and to 'The maintenance of law and order in America'). Again, we made some small changes, for instance, replacing 'The rights and freedoms of the U.S. population as a whole' to 'The rights and freedoms of British people'. We combined these measures in an additive scale of perceived 'symbolic threats'. Again, internal consistency was lower than expected (a=.599), so we chose to include two of the individual items (threat_Rights_num, threat_Values_num) in our OLS regression models.  
+
+- **Political opinions**: We included one political variable: how much respondents liked Prime Minister Boris Johnson [like_BorisJohnson]. 
+
+- **Trust**: Finally, we controlled for two measures of trust: trust in the companies making the vaccines (trust_Comp) and trust in the UK government (trust_NHS). 
+
+\newpage
+
+## Effect of providing safety/effectiveness statistics (relative to no information) on interest in the vaccine
+
+First, we show the effect of exposure to any kind of information about vaccine safety or uncertainty. Here, the baseline is the control group, i.e. those who were simply asked to 'suppose you were offered the COVID-19 vaccine'. Outcome variables were measured on a seven-point scale from 0 (low) to 6 (high). 
+
+```{r full ols models - round 1 - incl. control - main DVs, warning = FALSE, message = FALSE, echo = FALSE, fig.cap="Effects of the information treatments (relative to no information) on Stage 1 vaccination intentions and perceived safety/effectiveness."} 
+
+round1_incl_control <- list()
+
+round1_incl_control[["(1) vacc. intentions"]] <- ols_vaxIntentRound1_ctrl_safe
+# round1_incl_control[["(2) certain"]] <- ols_vaxCertainRound1_ctrl_safe
+round1_incl_control[["(2) perc. safety"]] <- ols_vaxSafeRound1_ctrl
+
+round1_incl_control[["(3) vacc. intentions"]] <- ols_vaxIntentRound1_ctrl_effec
+# round1_incl_control[["(5) certain"]] <- ols_vaxCertainRound1_ctrl_effec
+round1_incl_control[["(4) perc. effectiveness"]] <- ols_vaxEffecRound1_ctrl
+
+library(modelsummary)
+library(tidyverse)
+
+msummary(round1_incl_control,
+         output = "gt", #  "round1_incl_control.docx", # 'table.tex',
+         coef_map = cm_ci_short,
+         coef_omit = 'Intercept', 
+         stars = TRUE, # c('*' = .05, '**' = .01, '***' = .001),
+         gof_omit = 'AIC|BIC|Log.Lik.',
+         # statistic = "std.error", fmt = '%.2f', 
+         title = 'Effects of the information treatments (relative to no information) on Stage 1 vaccination intentions and perceived safety/effectiveness',
+         # subtitle = "DV =  vaccination intentions in round 1",
+         notes = list('OLS regression models.')) %>%
+  tab_spanner(label = 'safety track',
+              columns = 2:3) %>%
+  tab_spanner(label = 'effectiveness track',
+              columns = 4:5) %>%
+  tab_footnote(footnote = md("OLS Regression models. Baseline: no information at all. "),
+               locations = cells_body(rows = 1, columns = 1))
+
+```
+
+These results are also illustrated in the coefficient plot in figure 1. Note that *all* safety treatments have a negative, statistically significant effect on vaccination intentions. We suspect that this is an awareness effect -- providing information about vaccine safety will inevitably lead respondents to consider the possibility of side effects. 
+
+```{r coef plots - round 1 - incl. control - main DVs - side by side, warning = FALSE, message = FALSE, echo = FALSE, fig.height=8, fig.cap="Effects of information treatments (relative to no information) on Stage 1 vaccination intentions and perceived safety/effectiveness"} 
+
+library(gridExtra)
+grid.arrange(coef_plot_Round1_safe_main_dvs, coef_plot_Round1_effec_main_dvs, ncol=2)
+
+```
+
+
+\newpage
+
+## OLS regression model for Figure 1: Effect of adding a confidence interval (relative to a point estimate) on interest in the vaccine
+
+```{r full ols models -- round 1 -- main dvs, warning = FALSE, message = FALSE, echo = FALSE, fig.cap="Effects of adding a confidence interval (relative to the point estimate) on immediate vaccination intentions and perceived safety/effectiveness."} 
+
+round1_main_dvs <- list()
+
+round1_main_dvs[["(1) vacc. intentions"]] <- ols_vaxIntentRound1_safe
+round1_main_dvs[["(2) perc. safety"]] <- ols_vaxSafeRound1_safe
+
+round1_main_dvs[["(3) vacc. intentions"]] <- ols_vaxIntentRound1_effec
+round1_main_dvs[["(4) perc. effectiveness"]] <- ols_vaxEffecRound1_effec
+
+msummary(round1_main_dvs,
+         output = "gt",
+         coef_map = cm_ci_short,
+         coef_omit = 'Intercept', 
+         stars = TRUE, # c('*' = .05, '**' = .01, '***' = .001),
+         gof_omit = 'AIC|BIC|Log.Lik.',
+         title = 'Effects of adding a confidence interval (relative to the point estimate) on immediate vaccination intentions and perceived safety/effectiveness.',
+         notes = list('OLS regression models.')) %>%
+  tab_spanner(label = 'safety track',
+              columns = 2:3) %>%
+  tab_spanner(label = 'effectiveness track',
+              columns = 4:5) %>%
+  tab_footnote(footnote = md("Baseline: point estimate"),
+               locations = cells_body(rows = 1, columns = 1))
+
+
+```
+
+
+Next, we show the OLS regression models underlying Figure 1 in the main body of the paper. Here, we restrict the sample to respondents in the treatment groups, comparing those who saw a range around the safety or effectiveness statistics (with or without an explanation as to why we cannot be exact) to those who saw a classic point estimate. This model excludes the those who saw no information at all. 
+
+\newpage
+
+## OLS regression model for Figure 2: Effect of adding a confidence interval (relative to the point estimate) on post-update interest in the vaccine. 
+
+In stage 2, respondents were asked to imagine that, after a few months, new data had come out and the estimates were updated. The following table, which underlies figure 2 of the main body, shows the effect of having seen a confidence interval, with or without an explanation, on vaccination intentions and perceived safety / effectiveness. 
+
+```{r full ols models -- stage 2, warning = FALSE, message = FALSE, echo = FALSE, fig.cap="Effect of adding a confidence interval (relative to the point estimate) on stage 2 vaccination intentions and perceived safety/effectiveness."} 
+
+round2_main_dvs <- list()
+
+round2_main_dvs[["(1) vacc. intentions"]] <- ols_vaxIntentRound2_safe
+round2_main_dvs[["(2) perc. safety"]] <- ols_vaxSafeRound2_safe
+
+round2_main_dvs[["(3) vacc. intentions"]] <- ols_vaxIntentRound2_effec
+round2_main_dvs[["(4) perc. effectiveness"]] <- ols_vaxEffecRound2_effec
+
+msummary(round2_main_dvs,
+         output = "gt",
+         coef_map = cm_ci_short,
+         coef_omit = 'Intercept', 
+         stars = TRUE, # c('*' = .05, '**' = .01, '***' = .001),
+         gof_omit = 'AIC|BIC|Log.Lik.',
+         title = 'Effect of acknowledging uncertainty on post-update interest in the vaccine (OLS Models)',
+         notes = list('OLS regression models.')) %>%
+  tab_spanner(label = 'safety track',
+              columns = 2:3) %>%
+  tab_spanner(label = 'effectiveness track',
+              columns = 4:5) %>%
+  tab_footnote(footnote = md("Baseline: point estimate"),
+               locations = cells_body(rows = 1, columns = 1))
+
+```
+
+\newpage
+
+In the main body of the paper, we report the effect of the treatment variables on vaccination intentions, perceived safety and effectiveness after exposure to the update. Here below, we report the effect on a slightly different version of these outcome variables: the *drop* in vaccination intentions [vaxDif], the *drop* in perceived safety[safeDif] and the *drop* in perceived effectiveness [effecDif]. The effects are similar. 
+
+```{r full ols models -- stage 2 (dif), warning = FALSE, message = FALSE, echo = FALSE, fig.cap="Effects of adding a confidence interval (relative to the point estimate) on the drop in vaccination intentions and perceived safety/effectiveness."} 
+
+dif <- list()
+
+dif[["(1) drop intentions"]] <- ols_vaxDif_safe 
+dif[["(3) drop safety"]] <- ols_safeDif_safe
+
+dif[["(4) drop intentions"]] <- ols_vaxDif_effec
+dif[["(6) drop effectiveness"]] <- ols_effecDif_effec
+
+msummary(dif,
+         output = "gt",
+         coef_map = cm_ci_short,
+         coef_omit = 'Intercept', 
+         stars = TRUE, # c('*' = .05, '**' = .01, '***' = .001),
+         gof_omit = 'AIC|BIC|Log.Lik.',
+         title = 'Effect of acknowledging uncertainty on the drop in interest in the vaccine (OLS Models)',
+         notes = list('OLS regression models.')) %>%
+  tab_spanner(label = 'safety track',
+              columns = 2:3) %>%
+  tab_spanner(label = 'effectiveness track',
+              columns = 4:5) %>%
+  tab_footnote(footnote = md("Baseline: point estimate"),
+               locations = cells_body(rows = 1, columns = 1))
+
+```
+
+
+
+```{r coef_plot_dif_safe, fig.cap="Safety Track",  warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+ols_vaxDif_safe_tidy <- tidy(ols_vaxDif_safe) %>% filter(term != "(Intercept)") %>% mutate(model = "Drop in \nvaccination \nintentions")
+
+ols_safeDif_safe_tidy <- tidy(ols_safeDif_safe) %>% filter(term != "(Intercept)") %>% mutate(model = "Drop in \nperceived \nsafety") 
+
+models_dif_safe <- rbind(ols_vaxDif_safe_tidy[1:2, ], 
+                         ols_safeDif_safe_tidy[1:2, ])
+
+coef_plot_dif_safe <-
+  dwplot(models_dif_safe,
+         dot_args = list(aes(shape = model), size = 5),
+         whisker_args = list(aes(linetype = model), size = 1.5),
+         line_args = list(alpha = 0.75),
+         vline = geom_vline(xintercept = 0, 
+                            colour = "grey60", 
+                            linetype = 2),
+         dodge_size = 0.8,
+  ) %>% 
+  relabel_predictors(cm_ci_safe) +
+    xlim(-0.7, 0.7) + 
+  theme_bw() + 
+  theme(legend.position = "top",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.ticks.y = element_blank(),
+        legend.title = element_blank(),
+        panel.border = element_blank(),
+        plot.title = element_text(hjust = 0.5, color = "#666666"),
+        axis.title.x=element_text(size=12, colour="#666666")
+        ) +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) +
+    scale_colour_grey() + 
+  xlab("\neffect of the treatments on drop in \na) vaccination intentions and \nb) perceived safety") + 
+  ggtitle("Safety Track\n") 
+        
+# print(coef_plot_dif_safe)
+ggsave("coef_plot_dif_safe.png")
+
+
+```
+
+
+
+```{r coef_plot_dif_effec, fig.cap="Effectiveness Track", warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+ols_vaxDif_effec_tidy <- tidy(ols_vaxDif_effec) %>% filter(term != "(Intercept)") %>% mutate(model = "Drop in \nvaccination \nintentions")
+
+ols_safeDif_effec_tidy <- tidy(ols_effecDif_effec) %>% filter(term != "(Intercept)") %>% mutate(model = "Drop in \nperceived \neffectiveness")
+
+models_dif_effec <- rbind(ols_vaxDif_effec_tidy[1:2, ], 
+                          ols_safeDif_effec_tidy[1:2, ])
+
+coef_plot_dif_effec <-
+  dwplot(models_dif_effec,
+         dot_args = list(aes(shape = model), size = 5),
+         whisker_args = list(aes(linetype = model), size = 1.5),
+         line_args = list(alpha = 0.75),
+         vline = geom_vline(xintercept = 0, 
+                            colour = "grey60", 
+                            linetype = 2),
+         dodge_size = 0.8,
+  ) %>% 
+  relabel_predictors(cm_ci_effec) +
+  xlim(-0.7, 0.7) + 
+  theme_bw() + 
+  theme(legend.position = "top",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.ticks.y = element_blank(),
+        legend.title = element_blank(),
+        panel.border = element_blank(),
+        plot.title = element_text(hjust = 0.5, color = "#666666"),
+        axis.title.x=element_text(size=12, colour="#666666")
+        ) +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) +
+    scale_colour_grey() + 
+  xlab("\neffect of the treatments on drop in \na) vaccination intentions and \nb) perceived effectiveness") + 
+  ggtitle("Effectiveness Track\n") 
+
+# print(coef_plot_dif_effec)
+ggsave("coef_plot_dif_effec.png")
+```
+
+<!-- \newpage -->
+
+```{r side by side stage 2, warning = FALSE, message = FALSE, echo = FALSE, fig.height=7, fig.cap="Effects of uncertainty treatments (relative to point estimate condition) on the drop in Stage 2 vaccination intentions and perceived safety/effectiveness"} 
+
+library(gridExtra)
+grid.arrange(coef_plot_dif_safe, coef_plot_dif_effec, ncol=2)
+
+```
+
+\newpage
+
+# C - Manipulation Check
+
+```{r manipulation check plot - safety track, fig.cap="Perceptions of change after the update (Safety Track)",  warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+# round(prop.table(table(df$ci2, df$manCheckSafety), 1), 2)
+# round(prop.table(table(df$ci2, df$manCheckEffec), 1), 2)
+
+library(likert)
+library(dplyr)
+
+manCheckSafe_data <-
+  df %>%
+  filter(complete.cases(ci2), complete.cases(manCheckSafety)) %>%
+  dplyr::select("ci2", "manCheckSafety") %>%
+  dplyr::rename("treatment" = ci2,
+                "Compared to what the manufacturers said before, how much safer, or less safe is the vaccine?" = manCheckSafety) %>%
+  as.data.frame()
+
+manCheckSafe_plot <-
+  plot(likert(manCheckSafe_data[, 2, drop=FALSE], 
+              grouping = manCheckSafe_data$treatment),
+       # center=3, 
+       plot.percents=TRUE, plot.percent.low=TRUE, plot.percent.high=TRUE,
+       group.order=c('point estimate', 'confidence interval', 'ci and explanation'),
+       colors=c('#d9d9d9','#bdbdbd', '#969696', '#636363','#252525'),
+       wrap=100,
+       text.size=5, ordered=FALSE
+       ) + 
+    theme(legend.position = "bottom",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=15),
+        axis.text.y = element_text(size=15),
+        legend.title = element_blank(),
+        panel.border = element_blank()
+        # plot.title = element_text(hjust = -1.2)
+        ) 
+
+print(manCheckSafe_plot)
+ggsave("manCheckSafe_plot.png")
+
+
+```
+
+```{r manipulation check plot - effectiveness track, fig.cap="Perceptions of change after the update (Effectiveness Track)",  warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+library(likert)
+
+# https://lmudge13.github.io/sample_code/likert_graphs.html
+
+manCheckEffec_data <-
+  df %>%
+  filter(complete.cases(ci2), complete.cases(manCheckEffec)) %>%
+  dplyr::select("ci2", "manCheckEffec") %>%
+  dplyr::rename("treatment" = ci2,
+                "Compared to what the manufacturers said before, how much more or less effective is the vaccine?" = manCheckEffec) %>%
+  as.data.frame()
+
+manCheckEffec_plot <-
+  plot(likert(manCheckEffec_data[, 2, drop=FALSE], 
+              grouping = manCheckEffec_data$treatment),
+       # center=3, 
+       plot.percents=TRUE, plot.percent.low=TRUE, plot.percent.high=TRUE,
+       group.order=c('point estimate', 'confidence interval', 'ci and explanation'),
+       colors=c('#d9d9d9','#bdbdbd', '#969696', '#636363','#252525'),
+       wrap=100,
+       text.size=5, ordered=FALSE
+       ) + 
+    theme(legend.position = "bottom",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=15),
+        axis.text.y = element_text(size=15),
+        legend.title = element_blank(),
+        panel.border = element_blank()
+        # plot.title = element_text(hjust = -1.2)
+        ) 
+
+print(manCheckEffec_plot)
+ggsave("manCheckEffec_plot.png")
+
+```
+
+Toward the end of the survey, after respondents saw the updated safety or effectiveness statistics, and after they answered questions about how likely they were to have that vaccine (if they had not had it before) we asked two questions to understand their feelings about how much the estimates had changed: Compared to what the manufacturers said before, how much safer, or less safe is the vaccine? Or, for those in the effectiveness track, how much more effective, or less effective is it? The figures below show how respondents answered these questions. 
+
+The effect of the confidence interval is notable. In the safety track, it pushed up the share of respondents saying it was 'about as safe as expected' from just over a third to just under half the sample. Meanwhile, the share of those who said it was 'a little less safe' declined from just under half the sample (45%) to just over a third (35% in the ci treatment or 32% in the ci and explanation treatment). 
+
+In the effectiveness track, the confidence interval increased the 'about as effective as expected' answers from just over a tenth to just under a third. Meanwhile, 'a little less' effective dropped from a whopping 80% to a still substantial 59% (ci) or 57% (ci and explanation). 
+
+In other words, people did notice that the estimates had become a little less optimistic -- but seeing a confidence interval meant that respondents knew what to expect. They did still perceive a change -- but, for most, the change was less dramatic. 
+
+
+\newpage
+
+# D - Study 2: Testing understanding of the information treatments 
+
+In Feb/March 2023, we fielded a second study, replicating the main study with a final block testing how well respondents understood the information about the vaccines. 
+
+**[selfunderstand]**
+In this last section of the survey we would like to ask a few more questions about the two pieces of information about the vaccine that you saw earlier.\
+
+We will start with the first one: [*re-print first piece of information about the safety/effectiveness about the vaccine.*] How easy or difficult did you find it to understand that information?
+  
+0 Very easy\
+1\
+2\
+3\
+4\
+5\
+6 Very difficult\
+
+**[helpfulinfo]**
+And how helpful or unhelpful did you find the information?
+  
+0 Very unhelpful\
+1\
+2\
+3\
+4\
+5\
+6 Very helpful\
+
+**[understand_effective]**\
+If a new vaccine is described as "90% effective" do you think that means:\
+
+If everyone is vaccinated, 90% will not get COVID and 10% will get it *[incorrect]* \newline 
+The probability of getting COVID is 90% lower among the vaccinated compared to the unvaccinated*[correct]* \newline 
+It means something else (please specify): \newline 
+Don't know \newline 
+
+And a few questions about the second piece of information we gave you: [*re-print update*].
+
+How far did this update make you feel any of the following:\
+
+**[feel_surprised]**
+surprised\
+**[feel_worried]**
+worried\
+**[feel_angry]**
+angry\
+**[feel_confused]**
+confused\
+
+0 Not at all\
+1\
+2\
+3\
+4\
+5\
+6 Extremely\
+
+**reason_update_effec** If you had to guess, why do you think the manufacturers said the vaccine was 90% effective at first but then corrected the number down to 83% a few months later? *[Effectiveness track only]*
+
+They exaggerated at first, trying to sell more vaccines*[lied]*\
+90% was their best guess at the time*[best guess]*\
+Don't know\
+
+**reason_update_safe** If you had to guess, why do you think the manufacturers said 2 in 10,000 would develop serious side effects, but then corrected the number up to 6 in 10,000 a few months later? *[Safety track only]*
+
+They exaggerated at first, trying to sell more vaccines*[lied]*\
+2 in 10,000 was probably their best guess at first*[best guess]*\
+Don't know\
+
+
+```{r summary stats 2, caption = 'Sample Characteristics (Study 2)', warning = FALSE, message = FALSE, echo = FALSE, results = 'asis'}
+
+# https://vincentarelbundock.github.io/modelsummary/articles/datasummary.html#background
+
+library(modelsummary)
+library(tidyverse)
+library(estimatr)
+
+summaryTableData_study2 <-
+  df2 %>%
+  dplyr::select(`Track` = track2, 
+                `Treatment group` = ci2, 
+                `Gender` = gender,
+                `Generation` = generation,
+                `Education` = education,
+                `Age to leave education` = educationleavage
+                )
+
+datasummary_balance(~Track, 
+                    data = summaryTableData_study2,
+                    title = "Sample Characteristics (Study 2)"
+                    )
+
+
+```
+
+Here below, we show answers to the questions testing understanding, and emotional reactions to the updates.
+
+```{r why update?, caption = 'Reactions to the information treatments (Study 2)', warning = FALSE, message = FALSE, echo = FALSE, results = 'asis'}
+
+effec_data_study2 <-
+  df2 %>%
+  dplyr::select(track, 
+                'understand information' =selfunderstand,
+                'information is helpful'=helpfulinfo,
+                'reason for update'=reason_update, # reason_update_effec
+                'understand effectiveness'=understand_effective_short 
+                ) 
+
+datasummary_balance(~track,
+                    data = effec_data_study2,
+                    title = "Reactions to the information treatments (Study 2) "
+                    # notes = reference
+                    )
+
+```
+
+
+```{r emotions plot, fig.cap="Emotional reactions to the update (Study 2)", fig.height=10, warning = FALSE, message = FALSE, echo = FALSE, results="asis"} 
+
+emotions_data <- 
+  df2 %>%
+  filter(complete.cases(feel_surprised),
+         complete.cases(feel_angry)
+         ) %>%
+  dplyr::select("ci2", 
+                "feel_surprised",
+                "feel_worried",
+                "feel_angry",
+                "feel_confused") %>%
+  dplyr::rename("treatment" = ci2, 
+                "surprised" = feel_surprised,
+                "worried" = feel_worried,
+                "angry" = feel_angry,
+                "confused" = feel_confused) %>%
+  as.data.frame()
+
+# plot(likert(emotions_data))
+emotions_plot <- 
+  plot(likert(emotions_data[, 2:5], grouping = emotions_data$treatment),
+       plot.percents=TRUE, plot.percent.low=TRUE, plot.percent.high=TRUE,
+       group.order=c('point estimate', 'confidence interval', 'ci and explanation'),
+       # colors=c('#ffffb2','#fed976', '#feb24c', '#fd8d3c','#fc4e2a', '#e31a1c', '#b10026'),
+       colors=c('#f7f7f7','#d9d9d9', '#bdbdbd', '#969696','#737373', '#525252', '#252525'),
+       wrap=100,
+       text.size=5, ordered=FALSE
+       ) + 
+    theme(legend.position = "right",
+        text = element_text(size = 15),
+        axis.text.x = element_text(size=15),
+        axis.text.y = element_text(size=15),
+        legend.title = element_blank(),
+        panel.border = element_blank()
+        # plot.title = element_text(hjust = -1.2)
+        ) 
+
+print(emotions_plot)
+ggsave("emotions_plot.png")
+
+```
+
+
+\newpage
+
+# E - Questionnaire
+
+This survey is part of a social science research project about COVID-19. Our testing shows that the survey takes around 6 minutes. Please do read the questions carefully -- this research is about important decisions in important areas of public health.
+
+Any data collected in this survey are totally anonymous and confidential. No personal information is collected. Your participation in the study is voluntary (and you may withdraw at any time).
+
+Before beginning, please enter your Prolific ID below [NB it can be found among your account info].
+
+## Introduction (All respondents)  {.unlisted .unnumbered}
+
+**[generalVaxIntent]** 
+  It may take some time, but the UK government is looking to make a COVID-19 vaccine available to all British citizens. If and when one is offered to you, would you have a vaccination?
+  
+  0 = Definitely wouldn't\
+1\
+2\
+3\
+4\
+5\
+6 = Definitely would\
+
+How much trust do you have in each of the following when it comes to battling against COVID-19?
+
+**[trust_NHS]** The NHS\
+0 None at all\
+1\
+2\
+3\
+4\
+5\
+6 A great deal\
+
+**[trust_Comp]** The companies making the vaccines\
+0 None at all\
+1\
+2\
+3\
+4\
+5\
+6 A great deal\
+
+**[trust_Gov]** The UK government\
+0 None at all\
+1\
+2\
+3\
+4\
+5\
+6 A great deal\
+
+In your opinion, how serious a threat is the coronavirus outbreak to each of the following?
+
+**[threat_Rights]** The rights and freedoms of British people\
+Not at all\
+Not very\
+Fairly\
+Extremely\
+
+**[threat_Values]** British values and traditions\
+Not at all\
+Not very\
+Fairly\
+Extremely\
+
+**[threat_MyHealth]** Your personal health\
+Not at all\
+Not very\
+Fairly\
+Extremely\
+
+**[threat_FinSit]** Your financial situation\
+Not at all\
+Not very\
+Fairly\
+Extremely\
+
+**[threat_Econ]** The British economy\
+Not at all\
+Not very\
+Fairly\
+Extremely\
+
+**[threat_BritHealth]** The health of the British people\
+Not at all\
+Not very\
+Fairly\
+Extremely\
+
+**[threat_Democracy]** British democracy\
+Not at all\
+Not very\
+Fairly\
+Extremely\
+
+**[threat_ComLife]** Day-to-day life in your local community\
+Not at all\
+Not very\
+Fairly\
+Extremely\
+
+**[gotTested]**
+Have you ever been tested for COVID-19? 
+
+Yes, and tested positive at least once Yes, but never tested positive\
+No, never been tested  
+
+**[if yes]**
+
+**[howSevere]**
+And how mild or severe was your illness? 
+
+No symptoms at all\
+Mild symptoms\
+Moderate symptoms\
+Severe symptoms, no hospitalization\
+Severe symptoms and hospitalization\
+Prefer not to say\
+
+**[hadCovid]**
+Since tests are not 100% reliable, we're also interested in your opinion. What do you think are the chances that you have had (or currently have) the virus? 
+  
+  Certain that I've had it\
+Pretty sure I've had it\
+Think I've probably had it\
+Not at all sure\
+Think I probably haven't had it\
+Pretty sure I haven't had it\
+Certain that I haven't had it\
+
+**[highRisk]**
+  Are you or any of your close family in a high-risk category when it comes to COVID-19? 
+  
+  I'm high risk\
+I'm not but at least one of my family members is\
+I'm high risk and at least one more of my family members is also high-risk\
+No, none of my close family is high risk\
+Prefer not to say\
+
+### Introducing the hypothetical vaccine (All respondents) {.unlisted .unnumbered}
+
+*At this point, respondents were randomly assigned to one of the following groups.*
+
+*25% to 'control (no information at all)'*\
+*12.5% to 'effectiveness | point estimate'*\
+*12.5% to 'effectiveness | confidence interval'*\
+*12.5% to 'effectiveness | ci and explanation'*\
+*12.5% to 'safety | point estimate'*\
+*12.5% to 'safety | confidence interval'*\
+*12.5% to 'safety | ci and explanation'*\
+
+
+**If group = 'control'**\
+
+Suppose you were offered the COVID-19 vaccine.\
+
+**If group != 'control'**\
+
+Suppose you were offered a COVID-19 vaccine.
+
+Click 'next' to see some information from the manufacturers based on their testing of the vaccine.\
+
+**If group = 'effectiveness | point estimate'**\
+
+According to the manufacturers:
+
+"Our tests show that the vaccine is 90% effective. What that means is that our vaccine reduces transmissions of the virus by 90%."\
+
+**If group = 'effectiveness | confidence interval'**\
+
+According to the manufacturers:
+
+"Our best estimate of the effectiveness of the vaccine is 90%
+effective. What that means it that our vaccine reduces transmissions of the virus by 90%. To be more exact, our tests show that the true effectiveness level is very likely to fall between 83% and 97%."\
+
+
+**If group = 'effectiveness | ci and explanation'**\
+
+According to the manufacturers:
+
+"Our best estimate of the effectiveness of the vaccine is 90%
+effective.
+
+What that means it that our vaccine reduces transmissions of the virus by 90%. To be more exact, our tests show that the true effectiveness level is very likely to fall between 83% and 97%.
+
+We cannot be exact in these circumstances for two reasons. One reason is that, like opinion polls, any results based on a sample of people come with a margin of error (because another sample might have been a bit different). Another reason why we cannot be exact is that those tested were not a perfect reflection of the UK population: for example, there was no one under the age of 12 or over the age of 85. However, the sample did include well over 40,000 people from all walks of life, ethnicities and medical histories, and so our estimate is quite accurate even if not perfect."\
+
+
+**If group = 'safety | point estimate'**\
+
+According to the manufacturers:
+
+"Our tests show that the vaccine is safe. Side effects are rare and almost always minor. A tiny minority - just 2 in 10,000 - develop more serious side effects. The most likely serious side effect is Bell's Palsy, a freezing of muscles on one side of the face."\
+
+**If group = 'safety | confidence interval'**\
+
+According to the manufacturers:
+
+"Our tests show that the vaccine is safe. Side effects are rare and almost always minor. A tiny minority - just 2 in 10,000 - develop more serious side effects. The most likely serious side effect is Bell's Palsy, a freezing of muscles on one side of the face.
+
+To be more exact, we estimate that between 1 and 6 out of 10,000 people will experience serious side effects -- an extremely small proportion."\
+
+**If group = 'safety | ci and explanation'**\
+
+According to the manufacturers:
+
+"Our tests show that the vaccine is safe. Side effects are rare and almost always minor. A tiny minority - just 2 in 10,000 - develop more serious side effects. The most common serious side effect is Bell's Palsy, a freezing of muscles on one side of the face.
+
+To be more exact, we estimate that between 1 and 6 out of 10,000 people will experience serious side effects -- an extremely small proportion.
+
+We cannot be exact in these circumstances for two reasons.
+One reason is that we have only been able to follow our volunteers for a few weeks. It is possible that they will develop side effects later on. Another reason is that those tested were not a perfect reflection of the UK population: for example, there was no one under the age of 12 or over the age of 85. However, the sample did include well over 40,000 people from all walks of life, ethnicities and medical histories, and so our estimate is quite accurate even if not perfect."
+
+### Round 1 DVs (All respondents) {.unlisted .unnumbered}
+
+**If group != Control**\
+
+If this particular vaccine was offered to you, how likely are you to choose to have it?\
+
+**If group = Control**\
+
+**[vaxIntentRound1]**
+How likely are you to choose to have it?
+
+0 = Definitely wouldn't\
+1\
+2\
+3\
+4\
+5\
+6 = Definitely would\
+
+**[vaxCertainRound1]** (Respondents in the 'effectiveness' track skip this question)\
+And how confident are you in your decision about whether to have this vaccine? 
+
+Very confident\
+Fairly confident\
+Not very confident\
+Not at all confident\
+
+**[vaxEffecRound1]** (Respondents in the 'safety' track skip this question)\
+Leaving aside your own decision, how would you describe the COVID-19 vaccine overall in terms of effectiveness?
+
+0 Not effective at all\ 
+1 Not very\ 
+2 Slightly\ 
+3 Moderately\ 
+4 Fairly\ 
+5 Very\ 
+6 Extremely effective\   
+
+**[vaxSafeRound1]**
+Leaving aside your own decision, how would you describe the COVID-19 vaccine overall in terms of safety? 
+
+0 Not safe at all\
+1 Not very\
+2 Slightly\
+3 Moderately\
+4 Fairly\
+5 Very\
+6 Extremely safe\
+
+**[vaxInformed]**
+Do you feel informed enough to decide whether or not to have the vaccine? 
+
+Yes, I have all the information I need\
+No, I would need a bit more information\
+No, I would need quite a lot more information\
+No, I would need much more information\
+
+**[vaxApprove]**
+Suppose the UK government decided to approve this vaccine for public use. How would you feel about this decision? 
+
+Strongly support\
+Support\
+Not sure\
+Oppose\
+Strongly oppose\
+
+**[vaxTransparent]**
+Generally speaking, how open and transparent do you feel the manufacturers are being with information about the COVID-19 vaccine? 
+
+0 Not transparent at all\
+1\
+2\
+3\
+4\
+5\
+6 Very transparent\
+
+### Demographics (All respondents) {.unlisted .unnumbered}
+
+**[gender]**
+Next, a few questions about you. What is your gender? 
+
+Male\
+Female\
+Prefer not to say\
+Other (please specify)\
+
+**[employment]**
+What is your current employment status? 
+
+Employed full time\
+Employed part time\
+Unemployed looking for work\ 
+Unemployed not looking for work - Looking after the home/children\
+Retired\
+Student\
+Self-employed\
+
+**[work]**
+Has the COVID-19 pandemic affected the way you work?
+
+No - the pandemic has not affected my work\
+Yes - I am (or was) working from home\
+Yes - I am working (or have worked) reduced hours because of the pandemic\
+Yes - I have been furloughed\
+Yes - I have lost my job\
+Yes - In other ways\
+
+**[born]**
+In which year were you born? 
+
+**[ethnicity]**
+Please choose one option that best describes your ethnic group or background. 
+
+African\
+Any other ethnic group\
+Arab\
+Bangladeshi\
+Caribbean\
+Chinese\
+Indian\
+Mixed/Multiple ethnic groups - White and Asian\
+Mixed/Multiple ethnic groups - White and Black African\
+Mixed/Multiple ethnic groups - White and Black Caribbean\
+Other Asian background\
+Other Black/African/Caribbean background\
+Other Mixed/Multiple ethnic background\
+Other white background\
+Pakistani\
+White English/Welsh/Scottish/Northern Irish/British\
+White Irish\
+
+**[education]**
+What is your highest level of educational qualification?
+
+Degree or equivalent\
+A-level or equivalent\
+GCSE, O level, CSE or equivalent\
+No qualifications\
+Other (please specify)\
+
+### Update on vaccine safety / effectiveness (Control group skips this stage) {.unlisted .unnumbered}
+
+Next, we would like to go back to that COVID-19 vaccine we asked about earlier.
+
+Suppose that the vaccine has been in use for a few months and the manufacturers update their results.\
+
+**If track == safety**\
+"Based on the data we have now collected, we calculate that the vaccine causes serious side effects like Bell's Palsy (a freezing of muscles on one side of the face) in 6 out of 10,000 cases. This remains a tiny, tiny proportion of those vaccinated."\
+
+**If track == effectiveness**\
+"Based on the data we have now collected, we calculate that the vaccine is 83% effective. This remains a very high effectiveness rate by the standards of most vaccines, especially one developed so quickly."
+
+### Round 2 DVs (Control group skips this stage) {.unlisted .unnumbered}
+
+**[vaxIntentRound2]**
+Suppose you hadn't yet had a vaccine and then this one was offered to you. How likely are you to choose to have it? 
+  
+  0 = Definitely wouldn't\
+1\
+2\
+3\
+4\
+5\
+6 = Definitely would\
+
+**[vaxCertainRound2]**
+And how confident are you in your decision about whether to have this vaccine? 
+
+Very confident\
+Fairly confident\
+Not very confident\
+Not at all confident\
+
+
+**If track == effectiveness**\
+
+**[vaxEffecRound2]**
+We would like to ask you again: Leaving aside your own decision, how would you describe this vaccine overall in terms of effectiveness?  
+
+0 Not effective at all\ 
+1 Not very\ 
+2 Slightly\ 
+3 Moderately\ 
+4 Fairly\ 
+5 Very\ 
+6 Extremely effective\   
+
+**[manCheckEffec]** 
+Compared to what the manufacturers said before, is the vaccine: 
+
+A lot more effective\
+A little more effective\
+About as effective\
+A little less effective\
+A lot less effective\
+Don't know\
+
+**If track == safety**\
+
+**[vaxSafeRound2]** 
+  We would like to ask you again: Leaving aside your own decision, how would you describe this vaccine overall in terms of safety? 
+  
+  0 Not safe at all\
+1 Not very\
+2 Slightly\
+3 Moderately\
+4 Fairly\
+5 Very\
+6 Extremely safe\
+
+**[manCheckSafety]** 
+  Compared to what the manufacturers said before, is the vaccine: 
+  
+Much safer than expected\
+A little safer than expected\
+About as safe as expected\
+A little less safe than expected\
+Much less safe than expected\
+Don't know\
+
+### Political opinions (All respondents) {.unlisted .unnumbered}
+
+**[brexit]**
+Finally, we have a couple of questions about politics.
+If there were another referendum on the UK's membership of the European Union, how would you vote? 
+  
+To Leave the EU\
+To Remain in the EU\
+I wouldn't vote\
+
+And how much do you like or dislike each of the following people?\
+
+**[like_NicolaSturgeon]** Nicola Sturgeon\
+0 Strongly dislike\
+1\
+2\
+3\
+4\
+5\
+6 Strongly like\
+
+**[like_NigelFarage]**  Nigel Farage\
+0 Strongly dislike\
+1\
+2\
+3\
+4\
+5\
+6 Strongly like\
+
+**[like_BorisJohnson]**  Boris Johnson\
+0 Strongly dislike\
+1\
+2\
+3\
+4\
+5\
+6 Strongly like\
+
+**[like_ChrisWhitty]**  Chief medical officer for England Chris Whitty\
+0 Strongly dislike\
+1\
+2\
+3\
+4\
+5\
+6 Strongly like\
+
+**[like_KeirStarmer]**  Keir Starmer\
+0 Strongly dislike\
+1\
+2\
+3\
+4\
+5\
+6 Strongly like\
+
+
+### End page (All respondents) {.unlisted .unnumbered}
+Many thanks for completing this survey. Please click onwards so that your completion will be registered with Prolific. 
+
+If you have any queries or comments about the survey, please feel free to contact us at [blinded for review].
+
+
+
